@@ -1,11 +1,13 @@
 spring:
   application:
-    name: Rent-Car-Bot
+    name: rent-car-bot
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${DB_HOSTNAME}:${DB_PORT}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -13,6 +15,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+eureka:
+  client:
+    enabled: true
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://${EUREKA_HOSTNAME}:${EUREKA_PORT}/eureka
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
 
 telegram:
   bots:
@@ -23,14 +37,11 @@ telegram:
         username: ${BOT_USERNAME}
         path: /webhook
         url: ${WEBHOOK_URL}
+
 server:
   port: 8090
 
-eureka:
-  client:
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: http://${EUREKA_HOSTNAME}:${EUREKA_PORT}/eureka
-  instance:
-    hostname: ${EUREKA_HOSTNAME}
+logging:
+  level:
+    org.springframework.cloud.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
