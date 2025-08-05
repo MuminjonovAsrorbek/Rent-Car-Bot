@@ -16,17 +16,6 @@ spring:
       hibernate:
         format_sql: true
 
-eureka:
-  client:
-    enabled: true
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: http://${EUREKA_HOSTNAME}:${EUREKA_PORT}/eureka
-  instance:
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
 
 telegram:
   bots:
@@ -41,7 +30,14 @@ telegram:
 server:
   port: 8090
 
-logging:
-  level:
-    org.springframework.cloud.netflix.eureka: DEBUG
-    com.netflix.discovery: DEBUG
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+
+services:
+  rent-car-service:
+    url: http://localhost:8080
