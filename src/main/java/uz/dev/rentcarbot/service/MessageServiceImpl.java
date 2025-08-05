@@ -40,8 +40,8 @@ public class MessageServiceImpl implements MessageService {
             String phoneNumber = contact.getPhoneNumber();
 
 
-
         }
 
+        return null;
     }
 }

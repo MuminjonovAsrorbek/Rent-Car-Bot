@@ -26,3 +26,12 @@ telegram:
 server:
   port: 8090
 
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://${EUREKA_HOSTNAME}:${EUREKA_PORT}/eureka
+  instance:
+    hostname: localhost
+
