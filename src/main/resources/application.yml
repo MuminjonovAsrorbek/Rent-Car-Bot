@@ -1,19 +1,28 @@
 spring:
   application:
     name: Rent-Car-Bot
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOSTNAME}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
 telegram:
   bots:
     enabled: true
     bots-list:
-      mybot:
+      bot:
         token: ${BOT_TOKEN}
         username: ${BOT_USERNAME}
-        path: "/webhook/mybot"
-
+        path: /webhook
+        url: ${WEBHOOK_URL}
 server:
-  port: 8443                # HTTPS port (SSL talab qiladi)
-  ssl:
-    key-store: classpath:keystore.p12
-    key-store-password: your_password
-    key-store-type: PKCS12
+  port: 8090
+
