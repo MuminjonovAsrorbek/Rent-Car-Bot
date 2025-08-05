@@ -34,4 +34,3 @@ eureka:
       defaultZone: http://${EUREKA_HOSTNAME}:${EUREKA_PORT}/eureka
   instance:
     hostname: localhost
-
