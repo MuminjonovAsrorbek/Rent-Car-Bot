@@ -95,6 +95,12 @@ public class MessageServiceImpl implements MessageService {
 
         }
 
-        return null;
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("""
+                        ❌ Noto‘g‘ri buyruq!
+                        Iltimos, mavjud komandalarni ishlating.
+                        """)
+                .build();;
     }
 }
