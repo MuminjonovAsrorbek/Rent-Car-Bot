@@ -72,7 +72,7 @@ public class TextServiceImpl implements TextService {
 
                     TelegramUser user = userOptional.get();
 
-                    ReplyKeyboardMarkup menuButtons = replyButtonService.buildMenuButtons(user.getRole());
+
 
                 }
             }
