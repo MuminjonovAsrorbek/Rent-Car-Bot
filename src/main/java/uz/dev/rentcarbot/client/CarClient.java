@@ -2,6 +2,7 @@ package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import uz.dev.rentcarbot.payload.CarDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
@@ -16,5 +17,8 @@ public interface CarClient {
 
     @GetMapping("/open/available")
     PageableDTO<CarDTO> getAvailableCars(@RequestParam int page, @RequestParam int size);
+
+    @GetMapping("/open/{id}")
+    CarDTO getCarById(@PathVariable Long id);
 
 }

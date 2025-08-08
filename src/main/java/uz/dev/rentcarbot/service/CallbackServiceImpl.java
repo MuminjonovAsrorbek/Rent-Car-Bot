@@ -72,6 +72,14 @@ public class CallbackServiceImpl implements CallbackService {
                     .parseMode(ParseMode.HTML)
                     .build();
 
+        } else if (data.startsWith("car:")) {
+
+            String carID = data.split(":")[1];
+
+            CarDTO car = carClient.getCarById(Long.valueOf(carID));
+
+            
+
         }
 
         return SendMessage.builder()

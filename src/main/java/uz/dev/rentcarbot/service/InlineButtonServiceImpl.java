@@ -57,7 +57,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
             for (int j = i; j < i + 3 && j < cars.size(); j++) {
 
                 row.add(InlineKeyboardButton.builder()
-                        .text("\uD83D\uDE97 " + j + 1)
+                        .text("\uD83D\uDE97 " + (j + 1))
                         .callbackData("car:" + cars.get(j).getId())
                         .build());
 
