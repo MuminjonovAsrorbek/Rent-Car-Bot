@@ -7,12 +7,15 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import uz.dev.rentcarbot.client.AuthClient;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
+import uz.dev.rentcarbot.payload.TokenDTO;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
 import uz.dev.rentcarbot.service.template.TextService;
+import uz.dev.rentcarbot.service.template.TokenService;
 import uz.dev.rentcarbot.utils.CommonUtils;
 
 import java.util.Optional;
@@ -29,6 +32,8 @@ public class TextServiceImpl implements TextService {
     private final TelegramUserRepository userRepository;
 
     private final ReplyButtonService replyButtonService;
+    private final AuthClient authClient;
+    private final TokenService tokenService;
 
     @Override
     @Transactional
@@ -72,7 +77,17 @@ public class TextServiceImpl implements TextService {
 
                     TelegramUser user = userOptional.get();
 
+                    TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(user.getPhoneNumber());
 
+                    tokenService.saveTokens(chatId.toString(), tokenDTO.getAccessToken(), tokenDTO.getRefreshToken());
+
+                    ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
+
+                    return SendMessage.builder()
+                            .chatId(user.getChatId())
+                            .text("Menu")
+                            .replyMarkup(replyKeyboardMarkup)
+                            .build();
 
                 }
             }
