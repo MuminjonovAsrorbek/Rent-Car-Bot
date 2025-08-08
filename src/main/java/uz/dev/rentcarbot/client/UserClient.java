@@ -3,6 +3,7 @@ package uz.dev.rentcarbot.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import uz.dev.rentcarbot.payload.TgUserDTO;
 
 /**
  * Created by: asrorbek
@@ -13,6 +14,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface UserClient {
 
     @GetMapping("/open/telegram/get-by-phoneNumber/{phoneNumber}")
-    Boolean isRegistered(@PathVariable String phoneNumber);
+    TgUserDTO isRegistered(@PathVariable String phoneNumber);
 
 }
