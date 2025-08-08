@@ -73,6 +73,8 @@ public class MessageServiceImpl implements MessageService {
 
                 user.setStep(StepEnum.SELECT_MENU);
 
+                user.setUserId(registered.getId());
+
                 userRepository.save(user);
 
                 return SendMessage.builder()

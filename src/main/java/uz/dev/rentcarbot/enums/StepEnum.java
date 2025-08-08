@@ -9,6 +9,7 @@ public enum StepEnum {
 
     START,
     SEND_PHONE_NUMBER,
-    SELECT_MENU
+    SELECT_MENU,
+    IN_BOOKING
 
 }

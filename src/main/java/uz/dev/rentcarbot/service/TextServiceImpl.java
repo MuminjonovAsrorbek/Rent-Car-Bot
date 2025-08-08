@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -13,6 +14,7 @@ import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.TokenDTO;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
+import uz.dev.rentcarbot.service.template.InlineButtonService;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
 import uz.dev.rentcarbot.service.template.TextService;
 import uz.dev.rentcarbot.service.template.TokenService;
@@ -32,6 +34,8 @@ public class TextServiceImpl implements TextService {
     private final TelegramUserRepository userRepository;
 
     private final ReplyButtonService replyButtonService;
+
+    private final InlineButtonService inlineButtonService;
 
     private final AuthClient authClient;
 
@@ -104,9 +108,17 @@ public class TextServiceImpl implements TextService {
 
             if (user.getStep().equals(StepEnum.SELECT_MENU)) {
 
-                if(text.equals("\uD83D\uDD11 Ijaraga olish")){
+                if (text.equals("\uD83D\uDD11 Ijaraga olish")) {
 
-                    
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("""
+                                    <b>\uD83D\uDE97 Ijaraga olish uchun mavjud mashinalar:</b>
+                                    <i>Quyidagi tugmani bosing va hozirda band bo‘lmagan avtomobillar ro‘yxatini ko‘ring.</i>
+                                    \s""")
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineButtonService.buildAvailableCars())
+                            .build();
 
                 }
 
