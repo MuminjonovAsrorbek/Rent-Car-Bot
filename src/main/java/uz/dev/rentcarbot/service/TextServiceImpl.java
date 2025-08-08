@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
@@ -53,13 +54,18 @@ public class TextServiceImpl implements TextService {
                     user.setFirstName(message.getChat().getFirstName());
                     user.setUsername(CommonUtils.getOrDef(message.getChat().getUserName(), null));
                     user.setStep(StepEnum.SEND_PHONE_NUMBER);
+                    user.setRole(RoleEnum.USER);
 
                     userRepository.save(user);
 
                     return SendMessage.builder()
                             .chatId(chatId)
-                            .text("Iltimos telefon raqamingizni yuboring")
+                            .text("""
+                                    \uD83C\uDF89 **Xush kelibsiz, @RentCarBot ga!** \uD83D\uDE97 \s
+                                    Ro‘yxatdan o‘tish uchun **telefon raqamingizni** yuboring. \s
+                                    Bu sizning ijaralaringizni boshqarish va xizmatlarimizdan foydalanish uchun zarur!""")
                             .replyMarkup(buttonMarkup)
+                            .parseMode("MarkdownV2")
                             .build();
 
                 } else {

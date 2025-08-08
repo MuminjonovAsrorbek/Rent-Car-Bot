@@ -24,7 +24,7 @@ public class UpdateDispatcherServiceImpl implements UpdateDispatcherService {
 
         if (update.hasMessage()) {
 
-            messageService.processMessage(update.getMessage());
+            return messageService.processMessage(update.getMessage());
 
         }
 

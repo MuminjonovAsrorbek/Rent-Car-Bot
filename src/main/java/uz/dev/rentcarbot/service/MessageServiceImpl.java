@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.MessageService;
 import uz.dev.rentcarbot.service.template.TextService;
@@ -31,7 +32,7 @@ public class MessageServiceImpl implements MessageService {
 
         if (message.hasText()) {
 
-            textService.processText(message);
+            return textService.processText(message);
 
         } else if (message.hasContact()) {
 
@@ -39,6 +40,11 @@ public class MessageServiceImpl implements MessageService {
 
             String phoneNumber = contact.getPhoneNumber();
 
+            TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
+
+            user.setPhoneNumber(phoneNumber);
+
+            userRepository.save(user);
 
         }
 
