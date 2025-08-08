@@ -63,7 +63,7 @@ public class MessageServiceImpl implements MessageService {
 
                 TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(phoneNumber);
 
-                tokenService.saveTokens(chatId.toString(), tokenDTO.getAccessToken(), tokenDTO.getRefreshToken());
+                tokenService.saveTokens(chatId, tokenDTO);
 
                 ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(saved.getRole());
 

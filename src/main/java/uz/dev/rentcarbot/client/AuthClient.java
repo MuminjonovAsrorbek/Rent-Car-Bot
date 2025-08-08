@@ -3,6 +3,7 @@ package uz.dev.rentcarbot.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import uz.dev.rentcarbot.payload.TokenDTO;
 
 /**
@@ -16,4 +17,6 @@ public interface AuthClient {
     @GetMapping("/telegram/get-token/{phoneNumber}")
     TokenDTO getTokenByPhoneNumber(@PathVariable String phoneNumber);
 
+    @GetMapping("/verify")
+    TokenDTO verifyToken(@RequestParam String refreshToken);
 }

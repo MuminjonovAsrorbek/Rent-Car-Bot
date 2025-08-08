@@ -1,6 +1,6 @@
 package uz.dev.rentcarbot.service.template;
 
-import uz.dev.rentcarbot.model.UserToken;
+import uz.dev.rentcarbot.payload.TokenDTO;
 
 /**
  * Created by: asrorbek
@@ -8,9 +8,8 @@ import uz.dev.rentcarbot.model.UserToken;
  **/
 
 public interface TokenService {
-    void saveTokens(String chatId, String accessToken, String refreshToken);
 
-    UserToken getTokens(String chatId);
+    void saveTokens(Long chatId, TokenDTO tokenDTO);
 
-    void deleteTokens(String chatId);
+    String getAccessToken(Long chatId);
 }

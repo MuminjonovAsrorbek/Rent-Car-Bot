@@ -79,7 +79,7 @@ public class TextServiceImpl implements TextService {
 
                     TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(user.getPhoneNumber());
 
-                    tokenService.saveTokens(chatId.toString(), tokenDTO.getAccessToken(), tokenDTO.getRefreshToken());
+                    tokenService.saveTokens(chatId, tokenDTO);
 
                     ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
 
