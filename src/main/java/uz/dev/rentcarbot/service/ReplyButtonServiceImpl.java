@@ -45,6 +45,31 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
 
     @Override
     public ReplyKeyboardMarkup buildMenuButtons(RoleEnum role) {
-        return null;
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow firstKeyboardRow = new KeyboardRow();
+
+        firstKeyboardRow.add("\uD83D\uDD11 Ijaraga olish");
+        firstKeyboardRow.add("⚖️ Jarimalar");
+
+        keyboardRows.add(firstKeyboardRow);
+
+        KeyboardRow secondKeyboardRow = new KeyboardRow();
+
+        secondKeyboardRow.add("\uD83D\uDD14 Xabarnomalar");
+        secondKeyboardRow.add("❤️ Sevimlilar");
+
+        keyboardRows.add(secondKeyboardRow);
+
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+        return replyKeyboardMarkup;
+
     }
 }
