@@ -5,7 +5,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import uz.dev.rentcarbot.service.template.UpdateDispatcherService;
 
 /**
@@ -32,6 +35,17 @@ public class MyTelegramBot extends TelegramWebhookBot {
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
 
         return service.updateDispatch(update);
+
+    }
+
+    public Message sendPhoto(SendPhoto sendPhoto) {
+        try {
+
+            return execute(sendPhoto);
+
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
