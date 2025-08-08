@@ -13,7 +13,7 @@ public interface TelegramUserRepository extends JpaRepository<TelegramUser, Long
 
     Optional<TelegramUser> findByChatId(Long chatId);
 
-    default TelegramUser findByUserIdOrThrowException(Long chatId) {
+    default TelegramUser findByChatIdOrThrowException(Long chatId) {
 
         return this.findByChatId(chatId).orElseThrow(() -> new UserNotFoundException("Sizning xisobingiz topilmadi", HttpStatus.NOT_FOUND, chatId));
 

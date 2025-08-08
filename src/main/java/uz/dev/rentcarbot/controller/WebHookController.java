@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -16,11 +17,12 @@ import uz.dev.rentcarbot.config.MyTelegramBot;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("${telegram.bots.bots-list.bot.path}")
 public class WebHookController {
 
     private final MyTelegramBot telegramBot;
 
-    @PostMapping("${telegram.bots.bots-list.bot.path}")
+    @PostMapping
     public ResponseEntity<?> onUpdateReceived(@RequestBody Update update) {
 
         BotApiMethod<?> apiMethod = telegramBot.onWebhookUpdateReceived(update);
