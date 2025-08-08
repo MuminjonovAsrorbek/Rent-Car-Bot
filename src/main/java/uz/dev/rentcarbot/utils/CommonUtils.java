@@ -15,4 +15,11 @@ public class CommonUtils {
 
         return localDateTime.format(formatter);
     }
+
+    public static String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
 }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.MessageService;
 import uz.dev.rentcarbot.service.template.UpdateDispatcherService;
 
@@ -18,6 +19,8 @@ public class UpdateDispatcherServiceImpl implements UpdateDispatcherService {
 
     private final MessageService messageService;
 
+    private final CallbackService callbackService;
+
 
     @Override
     public BotApiMethod<?> updateDispatch(Update update) {
@@ -25,6 +28,10 @@ public class UpdateDispatcherServiceImpl implements UpdateDispatcherService {
         if (update.hasMessage()) {
 
             return messageService.processMessage(update.getMessage());
+
+        } else if (update.hasCallbackQuery()) {
+
+            return callbackService.processCallbackQuery(update.getCallbackQuery());
 
         }
 

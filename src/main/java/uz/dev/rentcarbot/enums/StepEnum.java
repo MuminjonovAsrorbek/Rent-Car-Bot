@@ -8,6 +8,8 @@ package uz.dev.rentcarbot.enums;
 public enum StepEnum {
 
     START,
-    SEND_PHONE_NUMBER
+    SEND_PHONE_NUMBER,
+    SELECT_MENU,
+    IN_BOOKING
 
 }
