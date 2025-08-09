@@ -97,15 +97,32 @@ public class CallbackServiceImpl implements CallbackService {
 
         } else if (data.startsWith("car-comment:")) {
 
-            return getCarComments(data, chatId);
+            long carId = Long.parseLong(data.split(":")[1]);
 
-        } else if(data.equals("close")){
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId, 0, 6);
+
+            reviews.setCurrentPage(0);
+
+            return getCarComments(carId, reviews, chatId);
+
+        } else if (data.equals("close")) {
 
             return DeleteMessage.builder()
                     .chatId(chatId)
                     .messageId(messageId)
                     .build();
 
+        } else if (data.startsWith("page:")) {
+
+            long id = Long.parseLong(data.split(":")[1]);
+
+            int page = Integer.parseInt(data.split(":")[2]);
+
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
+
+            reviews.setCurrentPage(0);
+
+            return getCarComments(id, reviews, chatId);
         }
 
         return SendMessage.builder()
@@ -118,15 +135,8 @@ public class CallbackServiceImpl implements CallbackService {
 
     }
 
-    private SendMessage getCarComments(String data, Long chatId) {
-
-        long carId = Long.parseLong(data.split(":")[1]);
-
-        PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId);
-
-        reviews.setCurrentPage(0);
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(reviews);
+    private SendMessage getCarComments(long carId, PageableDTO<ReviewDTO> reviews, Long chatId) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(carId, reviews);
 
         StringBuilder message = new StringBuilder();
 
