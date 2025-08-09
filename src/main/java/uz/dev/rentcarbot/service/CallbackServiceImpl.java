@@ -6,6 +6,7 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -38,6 +39,7 @@ public class CallbackServiceImpl implements CallbackService {
     private final InlineButtonService inlineButtonService;
 
     private final MyTelegramBot telegramBot;
+
     private final TelegramUserRepository telegramUserRepository;
 
     public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository) {
@@ -95,6 +97,13 @@ public class CallbackServiceImpl implements CallbackService {
 
         } else if (data.startsWith("car:")) {
 
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .messageId(messageId)
+                    .chatId(chatId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
+
             String carID = data.split(":")[1];
 
             CarDTO car = carClient.getCarById(Long.valueOf(carID));
@@ -130,6 +139,7 @@ public class CallbackServiceImpl implements CallbackService {
                 editMessageCaption.setChatId(chatId);
                 editMessageCaption.setMessageId(sendMessage.getMessageId());
                 editMessageCaption.setParseMode(ParseMode.HTML);
+                editMessageCaption.setReplyMarkup(inlineButtonService.buildCarInfo(carID));
 
                 return editMessageCaption;
             } else {
@@ -138,6 +148,7 @@ public class CallbackServiceImpl implements CallbackService {
                         .chatId(chatId)
                         .text(message)
                         .parseMode(ParseMode.HTML)
+                        .replyMarkup(inlineButtonService.buildCarInfo(carID))
                         .build();
 
             }

@@ -101,4 +101,43 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
+    @Override
+    public InlineKeyboardMarkup buildCarInfo(String carId) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("\uD83D\uDCAC Izohlar");
+        firstBtn.setCallbackData("car-comment:" + carId);
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("\uD83D\uDCF7 Boshqa rasmlar");
+        secondBtn.setCallbackData("car-images:" + carId);
+
+        keyboard.add(List.of(firstBtn, secondBtn));
+
+        InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
+
+        thirdBtn.setText("⚙️ Qo‘shimcha opsiyalar");
+        thirdBtn.setCallbackData("car-features:" + carId);
+
+        keyboard.add(List.of(thirdBtn));
+
+        InlineKeyboardButton fourthBtn = new InlineKeyboardButton();
+
+        fourthBtn.setText("\uD83D\uDCC5 Bron qilish");
+        fourthBtn.setCallbackData("car-booking:" + carId);
+
+        keyboard.add(List.of(fourthBtn));
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
 }
