@@ -14,10 +14,12 @@ import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import uz.dev.rentcarbot.client.CarClient;
+import uz.dev.rentcarbot.client.ReviewClient;
 import uz.dev.rentcarbot.config.ChatContextHolder;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.payload.CarDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
+import uz.dev.rentcarbot.payload.ReviewDTO;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
@@ -43,11 +45,14 @@ public class CallbackServiceImpl implements CallbackService {
 
     private final TelegramUserRepository telegramUserRepository;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository) {
+    private final ReviewClient reviewClient;
+
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
         this.telegramUserRepository = telegramUserRepository;
+        this.reviewClient = reviewClient;
     }
 
     @Override
@@ -83,6 +88,24 @@ public class CallbackServiceImpl implements CallbackService {
 
             return getAvailableCars(pageableDTO, messageId, chatId);
 
+        } else if (data.equals("car_close")) {
+
+            return DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+        } else if (data.startsWith("car-comment:")) {
+
+            return getCarComments(data, chatId);
+
+        } else if(data.equals("close")){
+
+            return DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
         }
 
         return SendMessage.builder()
@@ -93,6 +116,38 @@ public class CallbackServiceImpl implements CallbackService {
                         """)
                 .build();
 
+    }
+
+    private SendMessage getCarComments(String data, Long chatId) {
+
+        long carId = Long.parseLong(data.split(":")[1]);
+
+        PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId);
+
+        reviews.setCurrentPage(0);
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(reviews);
+
+        StringBuilder message = new StringBuilder();
+
+        List<ReviewDTO> reviewDTOList = reviews.getObjects();
+
+        for (int i = 0; i < reviewDTOList.size(); i++) {
+
+            message.append(i + 1).append(" . ").append("<b>\uD83D\uDCAC Izoh ID: </b>").append(reviewDTOList.get(i).getId()).append("\n");
+            message.append("<b>\uD83D\uDCC5 Yozilgan vaqti: </b>").append(reviewDTOList.get(i).getUpdatedAt()).append("\n");
+            message.append("<b>⭐ Reyting: </b>").append(reviewDTOList.get(i).getRating()).append("\n");
+            message.append("<b>✍ Izoh: </b>").append(reviewDTOList.get(i).getComment()).append("\n");
+            message.append("<b>\uD83D\uDC64 Foydalanuvchi: </b>").append(reviewDTOList.get(i).getUserFullName()).append("\n\n");
+
+        }
+
+        return SendMessage.builder()
+                .text(message.toString())
+                .chatId(chatId)
+                .replyMarkup(inlineKeyboardMarkup)
+                .parseMode(ParseMode.HTML)
+                .build();
     }
 
     private EditMessageText getAvailableCars(PageableDTO pageableDTO, Integer messageId, Long chatId) {
@@ -127,6 +182,7 @@ public class CallbackServiceImpl implements CallbackService {
     }
 
     private BotApiMethod<? extends Serializable> getCarInfo(Integer messageId, Long chatId, String data) {
+
         DeleteMessage deleteMessage = DeleteMessage.builder()
                 .messageId(messageId)
                 .chatId(chatId)
@@ -172,6 +228,7 @@ public class CallbackServiceImpl implements CallbackService {
             editMessageCaption.setReplyMarkup(inlineButtonService.buildCarInfo(carID));
 
             return editMessageCaption;
+
         } else {
 
             return SendMessage.builder()

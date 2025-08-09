@@ -14,4 +14,6 @@ public interface InlineButtonService {
     InlineKeyboardMarkup getAvailableCars(PageableDTO pageableDTO);
 
     InlineKeyboardMarkup buildCarInfo(String carId);
+
+    InlineKeyboardMarkup buildPages(PageableDTO pageableDTO);
 }

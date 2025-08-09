@@ -140,4 +140,45 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
+    @Override
+    public InlineKeyboardMarkup buildPages(PageableDTO pageableDTO) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+
+        if (pageableDTO.isHasPrevious()) {
+
+            row.add(InlineKeyboardButton.builder()
+                    .text("◀️ Oldingi")
+                    .callbackData("page:" + (pageableDTO.getCurrentPage() - 1))
+                    .build());
+
+        }
+
+        row.add(InlineKeyboardButton.builder()
+                .text("❌")
+                .callbackData("close")
+                .build());
+
+        if (pageableDTO.isHasNext()) {
+
+            row.add(InlineKeyboardButton.builder()
+                    .text("Keyingi ▶️")
+                    .callbackData("page:" + (pageableDTO.getCurrentPage() + 1))
+                    .build());
+
+
+        }
+
+        keyboard.add(row);
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
 }
