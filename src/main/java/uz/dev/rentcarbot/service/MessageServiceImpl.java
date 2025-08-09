@@ -10,7 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import uz.dev.rentcarbot.client.AuthClient;
 import uz.dev.rentcarbot.client.UserClient;
-import uz.dev.rentcarbot.config.ChatContextHolder;
+import uz.dev.rentcarbot.utils.ChatContextHolder;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.TgUserDTO;

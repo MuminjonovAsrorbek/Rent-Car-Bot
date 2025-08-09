@@ -2,6 +2,7 @@ package uz.dev.rentcarbot.service;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -14,12 +15,12 @@ import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import uz.dev.rentcarbot.client.CarClient;
+import uz.dev.rentcarbot.client.FavoriteClient;
 import uz.dev.rentcarbot.client.ReviewClient;
-import uz.dev.rentcarbot.config.ChatContextHolder;
+import uz.dev.rentcarbot.utils.ChatContextHolder;
 import uz.dev.rentcarbot.config.MyTelegramBot;
-import uz.dev.rentcarbot.payload.CarDTO;
-import uz.dev.rentcarbot.payload.PageableDTO;
-import uz.dev.rentcarbot.payload.ReviewDTO;
+import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
@@ -47,12 +48,15 @@ public class CallbackServiceImpl implements CallbackService {
 
     private final ReviewClient reviewClient;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient) {
+    private final FavoriteClient favoriteClient;
+
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
         this.telegramUserRepository = telegramUserRepository;
         this.reviewClient = reviewClient;
+        this.favoriteClient = favoriteClient;
     }
 
     @Override
@@ -65,6 +69,8 @@ public class CallbackServiceImpl implements CallbackService {
         ChatContextHolder.setChatId(chatId);
 
         Integer messageId = callbackQuery.getMessage().getMessageId();
+
+        String callbackId = callbackQuery.getId();
 
         if (data.equals("available-cars")) {
 
@@ -97,13 +103,61 @@ public class CallbackServiceImpl implements CallbackService {
 
         } else if (data.startsWith("car-comment:")) {
 
-            return getCarComments(data, chatId);
+            long carId = Long.parseLong(data.split(":")[1]);
 
-        } else if(data.equals("close")){
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId, 0, 6);
+
+            reviews.setCurrentPage(0);
+
+            return getCarComments(carId, reviews, chatId);
+
+        } else if (data.equals("close")) {
 
             return DeleteMessage.builder()
                     .chatId(chatId)
                     .messageId(messageId)
+                    .build();
+
+        } else if (data.startsWith("page:")) {
+
+            long id = Long.parseLong(data.split(":")[1]);
+
+            int page = Integer.parseInt(data.split(":")[2]);
+
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
+
+            reviews.setCurrentPage(0);
+
+            return getCarComments(id, reviews, chatId);
+        } else if (data.startsWith("car-favorite")) {
+
+            long carID = Long.parseLong(data.split(":")[1]);
+
+            TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+
+            TgFavoriteDTO checkFavorite = favoriteClient.getCheckFavorite(user.getUserId(), carID);
+
+            if (checkFavorite.isHave()) {
+
+                favoriteClient.deleteFavorite(checkFavorite.getId());
+
+                return AnswerCallbackQuery.builder()
+                        .callbackQueryId(callbackId)
+                        .text("Sevimlilardan o'chirildi !")
+                        .build();
+
+            }
+
+            FavoriteDTO createDTO = new FavoriteDTO();
+
+            createDTO.setCarId(carID);
+            createDTO.setUserId(user.getUserId());
+
+            favoriteClient.createFavorite(createDTO);
+
+            return AnswerCallbackQuery.builder()
+                    .callbackQueryId(callbackId)
+                    .text("Sevimlilarga qo'shildi !")
                     .build();
 
         }
@@ -118,15 +172,8 @@ public class CallbackServiceImpl implements CallbackService {
 
     }
 
-    private SendMessage getCarComments(String data, Long chatId) {
-
-        long carId = Long.parseLong(data.split(":")[1]);
-
-        PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId);
-
-        reviews.setCurrentPage(0);
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(reviews);
+    private SendMessage getCarComments(long carId, PageableDTO<ReviewDTO> reviews, Long chatId) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(carId, reviews);
 
         StringBuilder message = new StringBuilder();
 

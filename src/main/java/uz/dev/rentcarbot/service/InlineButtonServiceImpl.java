@@ -122,8 +122,8 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
         InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
 
-        thirdBtn.setText("⚙️ Qo‘shimcha opsiyalar");
-        thirdBtn.setCallbackData("car-features:" + carId);
+        thirdBtn.setText("♥️ / \uD83D\uDC94");
+        thirdBtn.setCallbackData("car-favorite:" + carId);
 
         keyboard.add(List.of(thirdBtn));
 
@@ -141,7 +141,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
     }
 
     @Override
-    public InlineKeyboardMarkup buildPages(PageableDTO pageableDTO) {
+    public InlineKeyboardMarkup buildPages(Long id, PageableDTO pageableDTO) {
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
 
@@ -153,7 +153,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
             row.add(InlineKeyboardButton.builder()
                     .text("◀️ Oldingi")
-                    .callbackData("page:" + (pageableDTO.getCurrentPage() - 1))
+                    .callbackData("page:" + id + ":" + (pageableDTO.getCurrentPage() - 1))
                     .build());
 
         }
@@ -167,7 +167,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
             row.add(InlineKeyboardButton.builder()
                     .text("Keyingi ▶️")
-                    .callbackData("page:" + (pageableDTO.getCurrentPage() + 1))
+                    .callbackData("page:" + id + ":" + (pageableDTO.getCurrentPage() + 1))
                     .build());
 
 
