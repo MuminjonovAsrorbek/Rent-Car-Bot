@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -43,6 +44,16 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
             return execute(sendPhoto);
 
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public void deleteMessage(DeleteMessage deleteMessage){
+
+        try {
+            execute(deleteMessage);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
