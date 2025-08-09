@@ -1,24 +1,28 @@
 package uz.dev.rentcarbot.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import uz.dev.rentcarbot.client.CarClient;
+import uz.dev.rentcarbot.config.ChatContextHolder;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.payload.CarDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
+import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,14 +38,13 @@ public class CallbackServiceImpl implements CallbackService {
     private final InlineButtonService inlineButtonService;
 
     private final MyTelegramBot telegramBot;
+    private final TelegramUserRepository telegramUserRepository;
 
-    @Value("${services.rent-car-service.url}")
-    private String rentCarServiceUrl;
-
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot) {
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
+        this.telegramUserRepository = telegramUserRepository;
     }
 
     @Override
@@ -50,6 +53,8 @@ public class CallbackServiceImpl implements CallbackService {
         String data = callbackQuery.getData();
 
         Long chatId = callbackQuery.getFrom().getId();
+
+        ChatContextHolder.setChatId(chatId);
 
         Integer messageId = callbackQuery.getMessage().getMessageId();
 
@@ -94,26 +99,48 @@ public class CallbackServiceImpl implements CallbackService {
 
             CarDTO car = carClient.getCarById(Long.valueOf(carID));
 
-            StringBuilder message = new StringBuilder();
+            String message = "<b>🚗 " + car.getBrand() + " " + car.getModel() + "</b>\n" +
+                    "📅 <b>Yili:</b> " + car.getYear() + "\n" +
+                    "💰 <b>Narxi:</b> " + car.getPricePerDay() + " so'm/kun\n" +
+                    "🪑 <b>O‘rindiqlar:</b> " + car.getSeats() + "\n" +
+                    "⛽ <b>Yonilg‘i turi:</b> " + car.getFuelType() + "\n" +
+                    "⚙️ <b>Transmissiya:</b> " + car.getTransmission() + "\n" +
+                    "🛢️ <b>Sarfi:</b> " + car.getFuelConsumption() + " L/100km\n";
 
-            message.append("🚗 *").append(car.getBrand()).append(" ").append(car.getModel()).append("*\n");
-            message.append("📅 Yili: ").append(car.getYear()).append("\n");
-            message.append("💰 Narxi: ").append(car.getPricePerDay()).append(" so'm/kun\n");
-            message.append("🪑 O‘rindiqlar: ").append(car.getSeats()).append("\n");
-            message.append("⛽ Yonilg‘i turi: ").append(car.getFuelType()).append("\n");
-            message.append("⚙️ Transmissiya: ").append(car.getTransmission()).append("\n");
-            message.append("🛢️ Sarfi: ").append(car.getFuelConsumption()).append(" L/100km\n");
+            if (car.getImageUrl() != null) {
 
-            SendPhoto sendPhoto = SendPhoto.builder()
-                    .chatId(chatId)
-                    .caption(message.toString())
-                    .parseMode(ParseMode.HTML)
-                    .photo(new InputFile(rentCarServiceUrl + car.getImageUrl()))
-                    .parseMode(ParseMode.HTML)
-                    .build();
+                int lastSlashIndex = car.getImageUrl().lastIndexOf("/");
 
-            Message sendMessage = telegramBot.sendPhoto(sendPhoto);
+                String idStr = car.getImageUrl().substring(lastSlashIndex + 1);
 
+                Long attachmentID = Long.parseLong(idStr);
+
+                SendPhoto sendPhoto = SendPhoto.builder()
+                        .chatId(chatId)
+                        .caption(LocalDateTime.now().toString())
+                        .photo(new InputFile(new File(telegramUserRepository.getPath(attachmentID))))
+                        .parseMode(ParseMode.HTML)
+                        .build();
+
+                Message sendMessage = telegramBot.sendPhoto(sendPhoto);
+
+                EditMessageCaption editMessageCaption = new EditMessageCaption();
+
+                editMessageCaption.setCaption(message);
+                editMessageCaption.setChatId(chatId);
+                editMessageCaption.setMessageId(sendMessage.getMessageId());
+                editMessageCaption.setParseMode(ParseMode.HTML);
+
+                return editMessageCaption;
+            } else {
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text(message)
+                        .parseMode(ParseMode.HTML)
+                        .build();
+
+            }
         }
 
         return SendMessage.builder()
