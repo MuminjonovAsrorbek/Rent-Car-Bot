@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import uz.dev.rentcarbot.config.ChatContextHolder;
 import uz.dev.rentcarbot.exceptions.UserNotFoundException;
+
+import java.net.ConnectException;
 
 @Service
 @RestControllerAdvice(basePackages = "uz.dev.rentcarbot")
@@ -17,6 +20,16 @@ public class GlobalExceptionHandler {
         return SendMessage.builder()
                 .chatId(e.getChatId())
                 .text(e.getMessage())
+                .build();
+
+    }
+
+    @ExceptionHandler(value = ConnectException.class)
+    public BotApiMethod<?> handle(ConnectException e) {
+
+        return SendMessage.builder()
+                .chatId(ChatContextHolder.getChatId())
+                .text("Kechirasiz server bilan aloqa yo'q iltimos keyinroq urunib ko'ring !")
                 .build();
 
     }
