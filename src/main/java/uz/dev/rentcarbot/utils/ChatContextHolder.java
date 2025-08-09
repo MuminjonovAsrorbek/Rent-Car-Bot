@@ -1,4 +1,4 @@
-package uz.dev.rentcarbot.config;
+package uz.dev.rentcarbot.utils;
 
 import org.springframework.stereotype.Component;
 

@@ -122,8 +122,8 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
         InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
 
-        thirdBtn.setText("⚙️ Qo‘shimcha opsiyalar");
-        thirdBtn.setCallbackData("car-features:" + carId);
+        thirdBtn.setText("♥️ / \uD83D\uDC94");
+        thirdBtn.setCallbackData("car-favorite:" + carId);
 
         keyboard.add(List.of(thirdBtn));
 
