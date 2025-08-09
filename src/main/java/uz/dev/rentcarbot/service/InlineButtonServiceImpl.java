@@ -69,13 +69,12 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
         List<InlineKeyboardButton> row = new ArrayList<>();
 
-        if (pageableDTO.isHasNext()) {
+        if (pageableDTO.isHasPrevious()) {
 
             row.add(InlineKeyboardButton.builder()
-                    .text("Keyingi ▶️")
-                    .callbackData("car_page:" + (pageableDTO.getCurrentPage() + 1))
+                    .text("◀️ Oldingi")
+                    .callbackData("car_page:" + (pageableDTO.getCurrentPage() - 1))
                     .build());
-
 
         }
 
@@ -84,12 +83,13 @@ public class InlineButtonServiceImpl implements InlineButtonService {
                 .callbackData("car_close")
                 .build());
 
-        if (pageableDTO.isHasPrevious()) {
+        if (pageableDTO.isHasNext()) {
 
             row.add(InlineKeyboardButton.builder()
-                    .text("◀️ Oldingi")
-                    .callbackData("car_page:" + (pageableDTO.getCurrentPage() - 1))
+                    .text("Keyingi ▶️")
+                    .callbackData("car_page:" + (pageableDTO.getCurrentPage() + 1))
                     .build());
+
 
         }
 

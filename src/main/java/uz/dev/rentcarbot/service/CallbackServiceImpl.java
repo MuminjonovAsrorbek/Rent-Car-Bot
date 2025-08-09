@@ -23,6 +23,7 @@ import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -66,92 +67,22 @@ public class CallbackServiceImpl implements CallbackService {
 
             pageableDTO.setCurrentPage(0);
 
-            InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.getAvailableCars(pageableDTO);
-
-            StringBuilder message = new StringBuilder();
-
-            message.append("""
-                    <b>\uD83D\uDE97 O'zingizga kerakli avtomobilni tanlang</b>
-                    
-                    <i>Quyida mavjud bo'lgan avtomobillarni ko'rishingiz mumkin. Har birini bosib, u haqida to'liqroq ma'lumot oling.</i>
-                    """).append("\n\n");
-
-            List<CarDTO> cars = (List<CarDTO>) pageableDTO.getObjects();
-
-            for (int i = 0; i < cars.size(); i++) {
-
-                message
-                        .append(i + 1).append(" . ").append("\uD83D\uDE98 Brand : ").append(cars.get(i).getBrand()).append("\n")
-                        .append("Ⓜ️ Model : ").append(cars.get(i).getModel()).append("\n")
-                        .append("\uD83D\uDCB5 Kunlik Narxi : ").append(cars.get(i).getPricePerDay()).append(" so'm").append("\n\n");
-
-            }
-
-            return EditMessageText.builder()
-                    .text(message.toString())
-                    .messageId(messageId)
-                    .chatId(chatId)
-                    .replyMarkup(inlineKeyboardMarkup)
-                    .parseMode(ParseMode.HTML)
-                    .build();
+            return getAvailableCars(pageableDTO, messageId, chatId);
 
         } else if (data.startsWith("car:")) {
 
-            DeleteMessage deleteMessage = DeleteMessage.builder()
-                    .messageId(messageId)
-                    .chatId(chatId)
-                    .build();
+            return getCarInfo(messageId, chatId, data);
 
-            telegramBot.deleteMessage(deleteMessage);
+        } else if (data.startsWith("car_page:")) {
 
-            String carID = data.split(":")[1];
+            int page = Integer.parseInt(data.split(":")[1]);
 
-            CarDTO car = carClient.getCarById(Long.valueOf(carID));
+            PageableDTO pageableDTO = carClient.getAvailableCars(page, 6);
 
-            String message = "<b>🚗 " + car.getBrand() + " " + car.getModel() + "</b>\n" +
-                    "📅 <b>Yili:</b> " + car.getYear() + "\n" +
-                    "💰 <b>Narxi:</b> " + car.getPricePerDay() + " so'm/kun\n" +
-                    "🪑 <b>O‘rindiqlar:</b> " + car.getSeats() + "\n" +
-                    "⛽ <b>Yonilg‘i turi:</b> " + car.getFuelType() + "\n" +
-                    "⚙️ <b>Transmissiya:</b> " + car.getTransmission() + "\n" +
-                    "🛢️ <b>Sarfi:</b> " + car.getFuelConsumption() + " L/100km\n";
+            pageableDTO.setCurrentPage(page);
 
-            if (car.getImageUrl() != null) {
+            return getAvailableCars(pageableDTO, messageId, chatId);
 
-                int lastSlashIndex = car.getImageUrl().lastIndexOf("/");
-
-                String idStr = car.getImageUrl().substring(lastSlashIndex + 1);
-
-                Long attachmentID = Long.parseLong(idStr);
-
-                SendPhoto sendPhoto = SendPhoto.builder()
-                        .chatId(chatId)
-                        .caption(LocalDateTime.now().toString())
-                        .photo(new InputFile(new File(telegramUserRepository.getPath(attachmentID))))
-                        .parseMode(ParseMode.HTML)
-                        .build();
-
-                Message sendMessage = telegramBot.sendPhoto(sendPhoto);
-
-                EditMessageCaption editMessageCaption = new EditMessageCaption();
-
-                editMessageCaption.setCaption(message);
-                editMessageCaption.setChatId(chatId);
-                editMessageCaption.setMessageId(sendMessage.getMessageId());
-                editMessageCaption.setParseMode(ParseMode.HTML);
-                editMessageCaption.setReplyMarkup(inlineButtonService.buildCarInfo(carID));
-
-                return editMessageCaption;
-            } else {
-
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text(message)
-                        .parseMode(ParseMode.HTML)
-                        .replyMarkup(inlineButtonService.buildCarInfo(carID))
-                        .build();
-
-            }
         }
 
         return SendMessage.builder()
@@ -164,5 +95,93 @@ public class CallbackServiceImpl implements CallbackService {
 
     }
 
+    private EditMessageText getAvailableCars(PageableDTO pageableDTO, Integer messageId, Long chatId) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.getAvailableCars(pageableDTO);
+
+        StringBuilder message = new StringBuilder();
+
+        message.append("""
+                <b>\uD83D\uDE97 O'zingizga kerakli avtomobilni tanlang</b>
+                
+                <i>Quyida mavjud bo'lgan avtomobillarni ko'rishingiz mumkin. Har birini bosib, u haqida to'liqroq ma'lumot oling.</i>
+                """).append("\n\n");
+
+        List<CarDTO> cars = (List<CarDTO>) pageableDTO.getObjects();
+
+        for (int i = 0; i < cars.size(); i++) {
+
+            message
+                    .append(i + 1).append(" . ").append("\uD83D\uDE98 Brand : ").append(cars.get(i).getBrand()).append("\n")
+                    .append("Ⓜ️ Model : ").append(cars.get(i).getModel()).append("\n")
+                    .append("\uD83D\uDCB5 Kunlik Narxi : ").append(cars.get(i).getPricePerDay()).append(" so'm").append("\n\n");
+
+        }
+
+        return EditMessageText.builder()
+                .text(message.toString())
+                .messageId(messageId)
+                .chatId(chatId)
+                .replyMarkup(inlineKeyboardMarkup)
+                .parseMode(ParseMode.HTML)
+                .build();
+    }
+
+    private BotApiMethod<? extends Serializable> getCarInfo(Integer messageId, Long chatId, String data) {
+        DeleteMessage deleteMessage = DeleteMessage.builder()
+                .messageId(messageId)
+                .chatId(chatId)
+                .build();
+
+        telegramBot.deleteMessage(deleteMessage);
+
+        String carID = data.split(":")[1];
+
+        CarDTO car = carClient.getCarById(Long.valueOf(carID));
+
+        String message = "<b>🚗 " + car.getBrand() + " " + car.getModel() + "</b>\n" +
+                "📅 <b>Yili:</b> " + car.getYear() + "\n" +
+                "💰 <b>Narxi:</b> " + car.getPricePerDay() + " so'm/kun\n" +
+                "🪑 <b>O‘rindiqlar:</b> " + car.getSeats() + "\n" +
+                "⛽ <b>Yonilg‘i turi:</b> " + car.getFuelType() + "\n" +
+                "⚙️ <b>Transmissiya:</b> " + car.getTransmission() + "\n" +
+                "🛢️ <b>Sarfi:</b> " + car.getFuelConsumption() + " L/100km\n";
+
+        if (car.getImageUrl() != null) {
+
+            int lastSlashIndex = car.getImageUrl().lastIndexOf("/");
+
+            String idStr = car.getImageUrl().substring(lastSlashIndex + 1);
+
+            Long attachmentID = Long.parseLong(idStr);
+
+            SendPhoto sendPhoto = SendPhoto.builder()
+                    .chatId(chatId)
+                    .caption(LocalDateTime.now().toString())
+                    .photo(new InputFile(new File(telegramUserRepository.getPath(attachmentID))))
+                    .parseMode(ParseMode.HTML)
+                    .build();
+
+            Message sendMessage = telegramBot.sendPhoto(sendPhoto);
+
+            EditMessageCaption editMessageCaption = new EditMessageCaption();
+
+            editMessageCaption.setCaption(message);
+            editMessageCaption.setChatId(chatId);
+            editMessageCaption.setMessageId(sendMessage.getMessageId());
+            editMessageCaption.setParseMode(ParseMode.HTML);
+            editMessageCaption.setReplyMarkup(inlineButtonService.buildCarInfo(carID));
+
+            return editMessageCaption;
+        } else {
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text(message)
+                    .parseMode(ParseMode.HTML)
+                    .replyMarkup(inlineButtonService.buildCarInfo(carID))
+                    .build();
+
+        }
+    }
 
 }
