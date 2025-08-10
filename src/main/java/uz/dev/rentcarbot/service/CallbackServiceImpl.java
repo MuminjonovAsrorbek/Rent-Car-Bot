@@ -131,9 +131,17 @@ public class CallbackServiceImpl implements CallbackService {
 
             telegramUserRepository.save(user);
 
-            return DeleteMessage.builder()
+            DeleteMessage deleteMessage = DeleteMessage.builder()
                     .chatId(chatId)
                     .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("MENU")
+                    .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
                     .build();
 
         } else if (data.startsWith("page:")) {
@@ -167,6 +175,14 @@ public class CallbackServiceImpl implements CallbackService {
 
         } else if (data.startsWith("for-")) {
 
+            EditMessageReplyMarkup replyMarkup = new EditMessageReplyMarkup();
+
+            replyMarkup.setChatId(chatId);
+            replyMarkup.setMessageId(messageId);
+            replyMarkup.setReplyMarkup(null);
+
+            telegramBot.editMessageReplyMarkup(replyMarkup);
+
             if (data.equals("for-me")) {
 
                 telegramBot.getUserBookings().get(chatId).setForSelf(true);
@@ -177,7 +193,7 @@ public class CallbackServiceImpl implements CallbackService {
 
                 StringBuilder message = new StringBuilder();
 
-                message.append("<b>\uD83D\uDCCD Qaysi ofisimizdan olib ketasiz?</b>");
+                message.append("<b>\uD83D\uDCCD Qaysi ofisimizdan olib ketasiz?</b>").append("\n\n");
 
                 for (int i = 0; i < allOffices.size(); i++) {
 
@@ -190,8 +206,9 @@ public class CallbackServiceImpl implements CallbackService {
 
                 telegramUserRepository.save(user);
 
-                return SendMessage.builder()
+                return EditMessageText.builder()
                         .chatId(chatId)
+                        .messageId(messageId)
                         .text(message.toString())
                         .parseMode(ParseMode.HTML)
                         .replyMarkup(inlineButtonService.buildOffices(dtos))
@@ -215,16 +232,31 @@ public class CallbackServiceImpl implements CallbackService {
 
             BookingDTO booking = bookingClient.createBooking(dto);
 
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
+
             if (Objects.nonNull(booking)) {
 
                 return SendMessage.builder()
                         .chatId(chatId)
                         .text(booking.toString())
+                        .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
                         .build();
 
             }
 
         } else if (user.getStep().equals(StepEnum.PICKUP_OFFICE)) {
+
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
 
             long pickupOfficeId = Long.parseLong(data.split(":")[1]);
 
@@ -246,6 +278,13 @@ public class CallbackServiceImpl implements CallbackService {
                     .build();
 
         } else if (user.getStep().equals(StepEnum.RETURN_OFFICE)) {
+
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
 
             long returnOfficeId = Long.parseLong(data.split(":")[1]);
 

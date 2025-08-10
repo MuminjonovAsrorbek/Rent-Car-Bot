@@ -193,6 +193,7 @@ public class TextServiceImpl implements TextService {
             return SendMessage.builder()
                     .chatId(chatId)
                     .text("MENU")
+                    .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
                     .build();
 
         }
@@ -238,6 +239,7 @@ public class TextServiceImpl implements TextService {
             return SendMessage.builder()
                     .chatId(chatId)
                     .text("MENU")
+                    .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
                     .build();
 
         }
@@ -265,7 +267,7 @@ public class TextServiceImpl implements TextService {
 
         StringBuilder message = new StringBuilder();
 
-        message.append("<b>\uD83D\uDCCD Qaysi ofisimizga qaytarasiz?</b>");
+        message.append("<b>\uD83D\uDCCD Qaysi ofisimizga qaytarasiz?</b>").append("\n\n");
 
         for (int i = 0; i < allOffices.size(); i++) {
 
