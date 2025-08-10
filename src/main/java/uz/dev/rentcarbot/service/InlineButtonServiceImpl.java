@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import uz.dev.rentcarbot.enums.PageEnum;
+import uz.dev.rentcarbot.enums.PaymetMethodEnum;
 import uz.dev.rentcarbot.payload.CarDTO;
+import uz.dev.rentcarbot.payload.OfficeDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 
@@ -113,19 +116,12 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         firstBtn.setText("\uD83D\uDCAC Izohlar");
         firstBtn.setCallbackData("car-comment:" + carId);
 
-        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
-
-        secondBtn.setText("\uD83D\uDCF7 Boshqa rasmlar");
-        secondBtn.setCallbackData("car-images:" + carId);
-
-        keyboard.add(List.of(firstBtn, secondBtn));
-
         InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
 
         thirdBtn.setText("♥️ / \uD83D\uDC94");
         thirdBtn.setCallbackData("car-favorite:" + carId);
 
-        keyboard.add(List.of(thirdBtn));
+        keyboard.add(List.of(firstBtn, thirdBtn));
 
         InlineKeyboardButton fourthBtn = new InlineKeyboardButton();
 
@@ -141,19 +137,30 @@ public class InlineButtonServiceImpl implements InlineButtonService {
     }
 
     @Override
-    public InlineKeyboardMarkup buildPages(Long id, PageableDTO pageableDTO) {
+    public InlineKeyboardMarkup buildPages(Long id, PageableDTO pageableDTO, PageEnum pageEnum) {
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
 
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
+        List<InlineKeyboardButton> row = getNextAndPrevBtns(id, pageableDTO, pageEnum);
+
+        keyboard.add(row);
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
+    private static List<InlineKeyboardButton> getNextAndPrevBtns(Long id, PageableDTO pageableDTO, PageEnum pageEnum) {
         List<InlineKeyboardButton> row = new ArrayList<>();
 
         if (pageableDTO.isHasPrevious()) {
 
             row.add(InlineKeyboardButton.builder()
                     .text("◀️ Oldingi")
-                    .callbackData("page:" + id + ":" + (pageableDTO.getCurrentPage() - 1))
+                    .callbackData("page:" + pageEnum + ":" + id + ":" + (pageableDTO.getCurrentPage() - 1))
                     .build());
 
         }
@@ -167,18 +174,106 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
             row.add(InlineKeyboardButton.builder()
                     .text("Keyingi ▶️")
-                    .callbackData("page:" + id + ":" + (pageableDTO.getCurrentPage() + 1))
+                    .callbackData("page:" + pageEnum + ":" + id + ":" + (pageableDTO.getCurrentPage() + 1))
                     .build());
 
 
         }
+        return row;
+    }
 
-        keyboard.add(row);
+    @Override
+    public InlineKeyboardMarkup buildIsForSelfOr() {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("Oʻzim uchun");
+        firstBtn.setCallbackData("for-me");
+
+        keyboard.add(List.of(firstBtn));
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("Boshqa birov uchun");
+        secondBtn.setCallbackData("for-other");
+
+        keyboard.add(List.of(secondBtn));
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
 
         return inlineKeyboardMarkup;
 
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildPaymentMethod() {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        PaymetMethodEnum[] values = PaymetMethodEnum.values();
+
+        for (int i = 0; i < values.length; i += 2) {
+
+            List<InlineKeyboardButton> row = new ArrayList<>();
+
+            row.add(InlineKeyboardButton.builder()
+                    .text(values[i].toString())
+                    .callbackData("payment:" + values[i].name())
+                    .build());
+
+            if (i + 1 < values.length) {
+
+                row.add(InlineKeyboardButton.builder()
+                        .text(values[i + 1].toString())
+                        .callbackData("payment:" + values[i + 1].name())
+                        .build());
+            }
+            keyboard.add(row);
+        }
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildOffices(PageableDTO pageableDTO) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        List<OfficeDTO> cars = (List<OfficeDTO>) pageableDTO.getObjects();
+
+        for (int i = 0; i < cars.size(); i += 5) {
+
+            List<InlineKeyboardButton> row = new ArrayList<>();
+
+            for (int j = i; j < i + 5 && j < cars.size(); j++) {
+
+                row.add(InlineKeyboardButton.builder()
+                        .text("\uD83C\uDFE2" + (j + 1))
+                        .callbackData("office:" + cars.get(j).getId())
+                        .build());
+            }
+            keyboard.add(row);
+
+        }
+
+        List<InlineKeyboardButton> nextAndPrevBtns = getNextAndPrevBtns(0L, pageableDTO, PageEnum.OFFICE);
+
+        keyboard.add(nextAndPrevBtns);
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return  inlineKeyboardMarkup;
     }
 
 }
