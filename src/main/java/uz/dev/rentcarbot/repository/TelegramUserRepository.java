@@ -26,5 +26,4 @@ public interface TelegramUserRepository extends JpaRepository<TelegramUser, Long
     @Query(value = "select path from attachments where id = :id", nativeQuery = true)
     String getPath(@Param("id") Long id);
 
-
 }

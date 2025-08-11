@@ -1,9 +1,7 @@
 package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import uz.dev.rentcarbot.payload.PageableDTO;
 import uz.dev.rentcarbot.payload.ReviewDTO;
 
@@ -17,6 +15,13 @@ public interface ReviewClient {
 
     @GetMapping("/open/car/{carId}")
     PageableDTO<ReviewDTO> getReviewsByCarId(@PathVariable Long carId,
-                                             @RequestParam int page, @RequestParam int size);
+                                             @RequestParam int page,
+                                             @RequestParam int size);
+
+    @PostMapping
+    ReviewDTO createReview(@RequestBody ReviewDTO reviewDTO);
+
+    @DeleteMapping("/{id}")
+    void deleteReview(@PathVariable Long id, @RequestParam Long userId);
 
 }
