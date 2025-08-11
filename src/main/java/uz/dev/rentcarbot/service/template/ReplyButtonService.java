@@ -12,4 +12,6 @@ public interface ReplyButtonService {
     ReplyKeyboardMarkup buildPhoneNumber();
 
     ReplyKeyboardMarkup buildMenuButtons(RoleEnum role);
+
+    ReplyKeyboardMarkup buildAdminMenuButtons();
 }

@@ -72,4 +72,29 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
         return replyKeyboardMarkup;
 
     }
+
+    @Override
+    public ReplyKeyboardMarkup buildAdminMenuButtons() {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setResizeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("Mashinalarni boshqarish");
+        row1.add("Foydalanuvchilarni ko'rish");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("Bronlarni boshqarish");
+        row2.add("Promo-kodlar");
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("⬅️ Oddiy menyuga qaytish");
+
+        keyboardRows.add(row1);
+        keyboardRows.add(row2);
+        keyboardRows.add(row3);
+
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+        return replyKeyboardMarkup;
+    }
 }

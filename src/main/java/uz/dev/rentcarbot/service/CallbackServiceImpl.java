@@ -17,14 +17,16 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import uz.dev.rentcarbot.client.CarClient;
 import uz.dev.rentcarbot.client.FavoriteClient;
 import uz.dev.rentcarbot.client.ReviewClient;
-import uz.dev.rentcarbot.utils.ChatContextHolder;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
+import uz.dev.rentcarbot.service.template.ConversationStateService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
-
+import uz.dev.rentcarbot.service.template.ReplyButtonService;
+import uz.dev.rentcarbot.utils.ChatContextHolder;
 import java.io.File;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -34,213 +36,171 @@ import java.util.List;
  * Created by: asrorbek
  * DateTime: 8/8/25 18:26
  **/
-
 @Service
 public class CallbackServiceImpl implements CallbackService {
 
     private final CarClient carClient;
-
     private final InlineButtonService inlineButtonService;
-
     private final MyTelegramBot telegramBot;
-
     private final TelegramUserRepository telegramUserRepository;
-
     private final ReviewClient reviewClient;
-
     private final FavoriteClient favoriteClient;
+    private final ReplyButtonService replyButtonService;
+    private final ConversationStateService conversationStateService;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient) {
+    public CallbackServiceImpl(CarClient carClient,
+                               InlineButtonService inlineButtonService,
+                               @Lazy MyTelegramBot telegramBot,
+                               TelegramUserRepository telegramUserRepository,
+                               ReviewClient reviewClient,
+                               FavoriteClient favoriteClient,
+                               ReplyButtonService replyButtonService,
+                               ConversationStateService conversationStateService) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
         this.telegramUserRepository = telegramUserRepository;
         this.reviewClient = reviewClient;
         this.favoriteClient = favoriteClient;
+        this.replyButtonService = replyButtonService;
+        this.conversationStateService = conversationStateService;
     }
 
     @Override
     public BotApiMethod<?> processCallbackQuery(CallbackQuery callbackQuery) {
 
         String data = callbackQuery.getData();
-
         Long chatId = callbackQuery.getFrom().getId();
-
         ChatContextHolder.setChatId(chatId);
-
         Integer messageId = callbackQuery.getMessage().getMessageId();
-
         String callbackId = callbackQuery.getId();
 
-        if (data.equals("available-cars")) {
+        if (data.startsWith("admin:")) {
 
-            PageableDTO pageableDTO = carClient.getAvailableCars(0, 6);
-
-            pageableDTO.setCurrentPage(0);
-
-            return getAvailableCars(pageableDTO, messageId, chatId);
-
-        } else if (data.startsWith("car:")) {
-
-            return getCarInfo(messageId, chatId, data);
-
-        } else if (data.startsWith("car_page:")) {
-
-            int page = Integer.parseInt(data.split(":")[1]);
-
-            PageableDTO pageableDTO = carClient.getAvailableCars(page, 6);
-
-            pageableDTO.setCurrentPage(page);
-
-            return getAvailableCars(pageableDTO, messageId, chatId);
-
-        } else if (data.equals("car_close")) {
-
-            return DeleteMessage.builder()
-                    .chatId(chatId)
-                    .messageId(messageId)
-                    .build();
-
-        } else if (data.startsWith("car-comment:")) {
-
-            long carId = Long.parseLong(data.split(":")[1]);
-
-            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId, 0, 6);
-
-            reviews.setCurrentPage(0);
-
-            return getCarComments(carId, reviews, chatId);
-
-        } else if (data.equals("close")) {
-
-            return DeleteMessage.builder()
-                    .chatId(chatId)
-                    .messageId(messageId)
-                    .build();
-
-        } else if (data.startsWith("page:")) {
-
-            long id = Long.parseLong(data.split(":")[1]);
-
-            int page = Integer.parseInt(data.split(":")[2]);
-
-            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
-
-            reviews.setCurrentPage(0);
-
-            return getCarComments(id, reviews, chatId);
-        } else if (data.startsWith("car-favorite")) {
-
-            long carID = Long.parseLong(data.split(":")[1]);
-
-            TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
-
-            TgFavoriteDTO checkFavorite = favoriteClient.getCheckFavorite(user.getUserId(), carID);
-
-            if (checkFavorite.isHave()) {
-
-                favoriteClient.deleteFavorite(checkFavorite.getId());
-
-                return AnswerCallbackQuery.builder()
-                        .callbackQueryId(callbackId)
-                        .text("Sevimlilardan o'chirildi !")
-                        .build();
-
+            if (data.equals("admin:cars:list")) {
+                List<CarDTO> cars = carClient.getAllCars();
+                if (cars == null || cars.isEmpty()) {
+                    return AnswerCallbackQuery.builder().callbackQueryId(callbackId).text("Hozirda tizimda mashinalar mavjud emas.").showAlert(true).build();
+                }
+                StringBuilder text = new StringBuilder("<b>Tizimdagi barcha mashinalar ro'yxati:</b>\n\n");
+                for (CarDTO car : cars) {
+                    text.append("<b>ID:</b> ").append(car.getId()).append(" | <b>Model:</b> ").append(car.getBrand()).append(" ").append(car.getModel()).append(" | <b>Narxi:</b> ").append(car.getPricePerDay()).append(" so'm\n");
+                }
+                return SendMessage.builder().chatId(chatId).text(text.toString()).parseMode(ParseMode.HTML).build();
             }
 
-            FavoriteDTO createDTO = new FavoriteDTO();
+            else if (data.equals("admin:back_to_main")) {
+                DeleteMessage deleteMessage = new DeleteMessage(chatId.toString(), messageId);
+                try { telegramBot.execute(deleteMessage); } catch (Exception e) {}
+                return SendMessage.builder().chatId(chatId).text("Asosiy admin menyusi:").replyMarkup(replyButtonService.buildAdminMenuButtons()).build();
+            }
 
-            createDTO.setCarId(carID);
-            createDTO.setUserId(user.getUserId());
+            else if (data.equals("admin:cars:add")) {
+                conversationStateService.startCarCreation(chatId);
+                TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+                user.setStep(StepEnum.ADMIN_ADDING_CAR_BRAND);
+                telegramUserRepository.save(user);
+                return SendMessage.builder().chatId(chatId).text("Yangi mashina qo'shish boshlandi.\n\nIltimos, mashina brendini kiriting (masalan, Chevrolet):").build();
+            }
 
-            favoriteClient.createFavorite(createDTO);
+            else if (data.equals("admin:cars:create_confirm")) {
+                CarDTO carToCreate = conversationStateService.getState(chatId);
+                if (carToCreate == null) {
+                    return SendMessage.builder().chatId(chatId).text("❌ Xatolik! Suhbat holati topilmadi. Qaytadan boshlang.").build();
+                }
+                try {
+                    carClient.createCar(carToCreate);
+                    conversationStateService.clearState(chatId);
+                    return SendMessage.builder().chatId(chatId).text("✅ Mashina muvaffaqiyatli tizimga qo'shildi!").build();
+                } catch (Exception e) {
+                    return SendMessage.builder().chatId(chatId).text("❌ Xatolik! Mashinani saqlashda muammo yuz berdi. Backend loglarini tekshiring.").build();
+                }
+            }
 
-            return AnswerCallbackQuery.builder()
-                    .callbackQueryId(callbackId)
-                    .text("Sevimlilarga qo'shildi !")
-                    .build();
-
+            else if (data.equals("admin:cars:create_cancel")) {
+                conversationStateService.clearState(chatId);
+                TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+                user.setStep(StepEnum.ADMIN_MENU);
+                telegramUserRepository.save(user);
+                return SendMessage.builder().chatId(chatId).text("Mashina qo'shish jarayoni bekor qilindi.").build();
+            }
         }
 
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("""
-                        ❌ Noto‘g‘ri buyruq!
-                        Iltimos, mavjud komandalarni ishlating.
-                        """)
-                .build();
 
+        else if (data.equals("available-cars")) {
+            PageableDTO<CarDTO> pageableDTO = carClient.getAvailableCars(0, 6);
+            pageableDTO.setCurrentPage(0);
+            return getAvailableCars(pageableDTO, messageId, chatId);
+        } else if (data.startsWith("car:")) {
+            return getCarInfo(messageId, chatId, data);
+        } else if (data.startsWith("car_page:")) {
+            int page = Integer.parseInt(data.split(":")[1]);
+            PageableDTO<CarDTO> pageableDTO = carClient.getAvailableCars(page, 6);
+            pageableDTO.setCurrentPage(page);
+            return getAvailableCars(pageableDTO, messageId, chatId);
+        } else if (data.equals("car_close")) {
+            return new DeleteMessage(chatId.toString(), messageId);
+        } else if (data.startsWith("car-comment:")) {
+            long carId = Long.parseLong(data.split(":")[1]);
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(carId, 0, 6);
+            reviews.setCurrentPage(0);
+            return getCarComments(carId, reviews, chatId);
+        } else if (data.equals("close")) {
+            return new DeleteMessage(chatId.toString(), messageId);
+        } else if (data.startsWith("page:")) {
+            long id = Long.parseLong(data.split(":")[1]);
+            int page = Integer.parseInt(data.split(":")[2]);
+            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
+            reviews.setCurrentPage(0);
+            return getCarComments(id, reviews, chatId);
+        } else if (data.startsWith("car-favorite")) {
+            long carID = Long.parseLong(data.split(":")[1]);
+            TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+            TgFavoriteDTO checkFavorite = favoriteClient.getCheckFavorite(user.getUserId(), carID);
+            if (checkFavorite.isHave()) {
+                favoriteClient.deleteFavorite(checkFavorite.getId());
+                return AnswerCallbackQuery.builder().callbackQueryId(callbackId).text("Sevimlilardan o'chirildi !").build();
+            }
+            FavoriteDTO createDTO = new FavoriteDTO();
+            createDTO.setCarId(carID);
+            createDTO.setUserId(user.getUserId());
+            favoriteClient.createFavorite(createDTO);
+            return AnswerCallbackQuery.builder().callbackQueryId(callbackId).text("Sevimlilarga qo'shildi !").build();
+        }
+
+        return SendMessage.builder().chatId(chatId).text("❌ Noma'lum buyruq!").build();
     }
 
     private SendMessage getCarComments(long carId, PageableDTO<ReviewDTO> reviews, Long chatId) {
         InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(carId, reviews);
-
         StringBuilder message = new StringBuilder();
-
         List<ReviewDTO> reviewDTOList = reviews.getObjects();
-
         for (int i = 0; i < reviewDTOList.size(); i++) {
-
             message.append(i + 1).append(" . ").append("<b>\uD83D\uDCAC Izoh ID: </b>").append(reviewDTOList.get(i).getId()).append("\n");
             message.append("<b>\uD83D\uDCC5 Yozilgan vaqti: </b>").append(reviewDTOList.get(i).getUpdatedAt()).append("\n");
             message.append("<b>⭐ Reyting: </b>").append(reviewDTOList.get(i).getRating()).append("\n");
             message.append("<b>✍ Izoh: </b>").append(reviewDTOList.get(i).getComment()).append("\n");
             message.append("<b>\uD83D\uDC64 Foydalanuvchi: </b>").append(reviewDTOList.get(i).getUserFullName()).append("\n\n");
-
         }
-
-        return SendMessage.builder()
-                .text(message.toString())
-                .chatId(chatId)
-                .replyMarkup(inlineKeyboardMarkup)
-                .parseMode(ParseMode.HTML)
-                .build();
+        return SendMessage.builder().text(message.toString()).chatId(chatId).replyMarkup(inlineKeyboardMarkup).parseMode(ParseMode.HTML).build();
     }
 
-    private EditMessageText getAvailableCars(PageableDTO pageableDTO, Integer messageId, Long chatId) {
+    private EditMessageText getAvailableCars(PageableDTO<CarDTO> pageableDTO, Integer messageId, Long chatId) {
         InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.getAvailableCars(pageableDTO);
-
         StringBuilder message = new StringBuilder();
-
-        message.append("""
-                <b>\uD83D\uDE97 O'zingizga kerakli avtomobilni tanlang</b>
-                
-                <i>Quyida mavjud bo'lgan avtomobillarni ko'rishingiz mumkin. Har birini bosib, u haqida to'liqroq ma'lumot oling.</i>
-                """).append("\n\n");
-
+        message.append("<b>\uD83D\uDE97 O'zingizga kerakli avtomobilni tanlang</b>\n\n<i>Quyida mavjud bo'lgan avtomobillarni ko'rishingiz mumkin. Har birini bosib, u haqida to'liqroq ma'lumot oling.</i>").append("\n\n");
         List<CarDTO> cars = (List<CarDTO>) pageableDTO.getObjects();
-
         for (int i = 0; i < cars.size(); i++) {
-
-            message
-                    .append(i + 1).append(" . ").append("\uD83D\uDE98 Brand : ").append(cars.get(i).getBrand()).append("\n")
-                    .append("Ⓜ️ Model : ").append(cars.get(i).getModel()).append("\n")
-                    .append("\uD83D\uDCB5 Kunlik Narxi : ").append(cars.get(i).getPricePerDay()).append(" so'm").append("\n\n");
-
+            message.append(i + 1).append(" . ").append("\uD83D\uDE98 Brand : ").append(cars.get(i).getBrand()).append("\n").append("Ⓜ️ Model : ").append(cars.get(i).getModel()).append("\n").append("\uD83D\uDCB5 Kunlik Narxi : ").append(cars.get(i).getPricePerDay()).append(" so'm\n\n");
         }
-
-        return EditMessageText.builder()
-                .text(message.toString())
-                .messageId(messageId)
-                .chatId(chatId)
-                .replyMarkup(inlineKeyboardMarkup)
-                .parseMode(ParseMode.HTML)
-                .build();
+        return EditMessageText.builder().text(message.toString()).messageId(messageId).chatId(chatId).replyMarkup(inlineKeyboardMarkup).parseMode(ParseMode.HTML).build();
     }
 
     private BotApiMethod<? extends Serializable> getCarInfo(Integer messageId, Long chatId, String data) {
-
-        DeleteMessage deleteMessage = DeleteMessage.builder()
-                .messageId(messageId)
-                .chatId(chatId)
-                .build();
-
+        DeleteMessage deleteMessage = new DeleteMessage(chatId.toString(), messageId);
         telegramBot.deleteMessage(deleteMessage);
-
         String carID = data.split(":")[1];
-
         CarDTO car = carClient.getCarById(Long.valueOf(carID));
-
         String message = "<b>🚗 " + car.getBrand() + " " + car.getModel() + "</b>\n" +
                 "📅 <b>Yili:</b> " + car.getYear() + "\n" +
                 "💰 <b>Narxi:</b> " + car.getPricePerDay() + " so'm/kun\n" +
@@ -248,44 +208,31 @@ public class CallbackServiceImpl implements CallbackService {
                 "⛽ <b>Yonilg‘i turi:</b> " + car.getFuelType() + "\n" +
                 "⚙️ <b>Transmissiya:</b> " + car.getTransmission() + "\n" +
                 "🛢️ <b>Sarfi:</b> " + car.getFuelConsumption() + " L/100km\n";
-
         if (car.getImageUrl() != null) {
-
             int lastSlashIndex = car.getImageUrl().lastIndexOf("/");
-
             String idStr = car.getImageUrl().substring(lastSlashIndex + 1);
-
             Long attachmentID = Long.parseLong(idStr);
-
             SendPhoto sendPhoto = SendPhoto.builder()
                     .chatId(chatId)
                     .caption(LocalDateTime.now().toString())
                     .photo(new InputFile(new File(telegramUserRepository.getPath(attachmentID))))
                     .parseMode(ParseMode.HTML)
                     .build();
-
             Message sendMessage = telegramBot.sendPhoto(sendPhoto);
-
             EditMessageCaption editMessageCaption = new EditMessageCaption();
-
             editMessageCaption.setCaption(message);
             editMessageCaption.setChatId(chatId);
             editMessageCaption.setMessageId(sendMessage.getMessageId());
             editMessageCaption.setParseMode(ParseMode.HTML);
             editMessageCaption.setReplyMarkup(inlineButtonService.buildCarInfo(carID));
-
             return editMessageCaption;
-
         } else {
-
             return SendMessage.builder()
                     .chatId(chatId)
                     .text(message)
                     .parseMode(ParseMode.HTML)
                     .replyMarkup(inlineButtonService.buildCarInfo(carID))
                     .build();
-
         }
     }
-
 }

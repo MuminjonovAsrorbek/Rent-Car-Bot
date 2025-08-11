@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import uz.dev.rentcarbot.payload.TgUserDTO;
+import uz.dev.rentcarbot.payload.UserDTO;
 
 /**
  * Created by: asrorbek
@@ -16,4 +17,6 @@ public interface UserClient {
     @GetMapping("/open/telegram/get-by-phoneNumber/{phoneNumber}")
     TgUserDTO isRegistered(@PathVariable String phoneNumber);
 
+    @GetMapping("/me/")
+    UserDTO getMe();
 }

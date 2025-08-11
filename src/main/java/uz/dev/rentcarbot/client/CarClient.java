@@ -1,11 +1,11 @@
 package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import uz.dev.rentcarbot.payload.CarDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
+import java.util.List;
 
 /**
  * Created by: asrorbek
@@ -20,5 +20,17 @@ public interface CarClient {
 
     @GetMapping("/open/{id}")
     CarDTO getCarById(@PathVariable Long id);
+
+    @PostMapping
+    CarDTO createCar(@RequestBody CarDTO carDto);
+
+    @PutMapping("/{id}")
+    CarDTO updateCar(@PathVariable Long id, @RequestBody CarDTO carDto);
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<Void> deleteCar(@PathVariable Long id);
+
+    @GetMapping
+    List<CarDTO> getAllCars();
 
 }

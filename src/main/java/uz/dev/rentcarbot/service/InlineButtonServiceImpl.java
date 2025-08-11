@@ -181,4 +181,24 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
+    @Override
+    public InlineKeyboardMarkup buildAdminCarMenu() {
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("Barcha mashinalarni ko'rish").callbackData("admin:cars:list").build()
+        ));
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("➕ Yangi mashina qo'shish").callbackData("admin:cars:add").build()
+        ));
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("❌ Mashinani o'chirish").callbackData("admin:cars:delete_start").build()
+        ));
+        rows.add(List.of(
+                InlineKeyboardButton.builder().text("⬅️ Orqaga").callbackData("admin:back_to_main").build()
+        ));
+
+        return new InlineKeyboardMarkup(rows);
+    }
+
 }
