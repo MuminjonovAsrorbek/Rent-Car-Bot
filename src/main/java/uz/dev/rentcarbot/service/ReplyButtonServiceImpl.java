@@ -46,6 +46,41 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
     @Override
     public ReplyKeyboardMarkup buildMenuButtons(RoleEnum role) {
 
+        if (role.equals(RoleEnum.USER)) {
+
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+
+            replyKeyboardMarkup.setSelective(true);
+            replyKeyboardMarkup.setResizeKeyboard(true);
+
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+            KeyboardRow firstKeyboardRow = new KeyboardRow();
+
+            firstKeyboardRow.add("\uD83D\uDD11 Ijaraga olish");
+            firstKeyboardRow.add("⚖️ Jarimalar");
+
+            keyboardRows.add(firstKeyboardRow);
+
+            KeyboardRow secondKeyboardRow = new KeyboardRow();
+
+            secondKeyboardRow.add("\uD83D\uDD14 Xabarnomalar");
+            secondKeyboardRow.add("❤️ Sevimlilar");
+
+            keyboardRows.add(secondKeyboardRow);
+
+            replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+            return replyKeyboardMarkup;
+        }
+
+        return null;
+
+    }
+
+    @Override
+    public ReplyKeyboardMarkup buildCancelButton() {
+
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
 
         replyKeyboardMarkup.setSelective(true);
@@ -55,17 +90,9 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
 
         KeyboardRow firstKeyboardRow = new KeyboardRow();
 
-        firstKeyboardRow.add("\uD83D\uDD11 Ijaraga olish");
-        firstKeyboardRow.add("⚖️ Jarimalar");
+        firstKeyboardRow.add("Orqaga");
 
         keyboardRows.add(firstKeyboardRow);
-
-        KeyboardRow secondKeyboardRow = new KeyboardRow();
-
-        secondKeyboardRow.add("\uD83D\uDD14 Xabarnomalar");
-        secondKeyboardRow.add("❤️ Sevimlilar");
-
-        keyboardRows.add(secondKeyboardRow);
 
         replyKeyboardMarkup.setKeyboard(keyboardRows);
 

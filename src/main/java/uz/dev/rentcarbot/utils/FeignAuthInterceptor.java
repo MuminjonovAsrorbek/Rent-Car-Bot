@@ -19,6 +19,7 @@ public class FeignAuthInterceptor implements RequestInterceptor {
 
         String accessToken = tokenService.getAccessToken(chatId);
 
-        template.header("Authorization", "Bearer " + accessToken);
+        if (accessToken != null)
+            template.header("Authorization", "Bearer " + accessToken);
     }
 }

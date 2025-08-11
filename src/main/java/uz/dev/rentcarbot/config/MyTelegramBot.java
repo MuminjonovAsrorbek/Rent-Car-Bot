@@ -1,5 +1,6 @@
 package uz.dev.rentcarbot.config;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -7,10 +8,15 @@ import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import uz.dev.rentcarbot.payload.BookingCreateDTO;
 import uz.dev.rentcarbot.service.template.UpdateDispatcherService;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by: asrorbek
@@ -32,6 +38,9 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
     private final UpdateDispatcherService service;
 
+    @Getter
+    private final Map<Long, BookingCreateDTO> userBookings = new HashMap<>();
+
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
 
@@ -50,10 +59,20 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
     }
 
-    public void deleteMessage(DeleteMessage deleteMessage){
+    public void deleteMessage(DeleteMessage deleteMessage) {
 
         try {
             execute(deleteMessage);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public void editMessageReplyMarkup(EditMessageReplyMarkup editMessageReplyMarkup) {
+
+        try {
+            execute(editMessageReplyMarkup);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
@@ -74,4 +93,5 @@ public class MyTelegramBot extends TelegramWebhookBot {
     public String getBotUsername() {
         return botUsername;
     }
+
 }

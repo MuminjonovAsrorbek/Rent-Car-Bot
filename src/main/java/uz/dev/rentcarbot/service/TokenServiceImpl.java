@@ -33,7 +33,7 @@ public class TokenServiceImpl implements TokenService {
             String refreshToken = (String) redisTemplate.opsForValue().get(getRefreshKey(chatId));
 
             if (refreshToken == null) {
-                throw new RuntimeException("User is not authorized");
+                return null;
             }
             TokenDTO newTokens = authFeignClient.verifyToken(refreshToken);
             saveTokens(chatId, newTokens);

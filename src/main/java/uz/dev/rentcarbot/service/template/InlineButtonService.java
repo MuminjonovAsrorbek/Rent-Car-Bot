@@ -1,6 +1,7 @@
 package uz.dev.rentcarbot.service.template;
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import uz.dev.rentcarbot.enums.PageEnum;
 import uz.dev.rentcarbot.payload.PageableDTO;
 
 /**
@@ -15,5 +16,11 @@ public interface InlineButtonService {
 
     InlineKeyboardMarkup buildCarInfo(String carId);
 
-    InlineKeyboardMarkup buildPages(Long Id, PageableDTO pageableDTO);
+    InlineKeyboardMarkup buildPages(Long Id, PageableDTO pageableDTO, PageEnum pageEnum);
+
+    InlineKeyboardMarkup buildIsForSelfOr();
+
+    InlineKeyboardMarkup buildPaymentMethod();
+
+    InlineKeyboardMarkup buildOffices(PageableDTO pageableDTO);
 }

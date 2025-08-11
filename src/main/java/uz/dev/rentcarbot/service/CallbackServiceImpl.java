@@ -1,5 +1,6 @@
 package uz.dev.rentcarbot.service;
 
+import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
@@ -9,26 +10,30 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import uz.dev.rentcarbot.client.CarClient;
-import uz.dev.rentcarbot.client.FavoriteClient;
-import uz.dev.rentcarbot.client.ReviewClient;
-import uz.dev.rentcarbot.utils.ChatContextHolder;
+import uz.dev.rentcarbot.client.*;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.enums.PageEnum;
+import uz.dev.rentcarbot.enums.PaymetMethodEnum;
+import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
+import uz.dev.rentcarbot.service.template.ReplyButtonService;
+import uz.dev.rentcarbot.utils.ChatContextHolder;
 
 import java.io.File;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by: asrorbek
@@ -49,17 +54,24 @@ public class CallbackServiceImpl implements CallbackService {
     private final ReviewClient reviewClient;
 
     private final FavoriteClient favoriteClient;
+    private final ReplyButtonService replyButtonService;
+    private final OfficeClient officeClient;
+    private final BookingClient bookingClient;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient) {
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
         this.telegramUserRepository = telegramUserRepository;
         this.reviewClient = reviewClient;
         this.favoriteClient = favoriteClient;
+        this.replyButtonService = replyButtonService;
+        this.officeClient = officeClient;
+        this.bookingClient = bookingClient;
     }
 
     @Override
+    @Transactional
     public BotApiMethod<?> processCallbackQuery(CallbackQuery callbackQuery) {
 
         String data = callbackQuery.getData();
@@ -71,6 +83,8 @@ public class CallbackServiceImpl implements CallbackService {
         Integer messageId = callbackQuery.getMessage().getMessageId();
 
         String callbackId = callbackQuery.getId();
+
+        TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
 
         if (data.equals("available-cars")) {
 
@@ -113,51 +127,182 @@ public class CallbackServiceImpl implements CallbackService {
 
         } else if (data.equals("close")) {
 
-            return DeleteMessage.builder()
+            user.setStep(StepEnum.SELECT_MENU);
+
+            telegramUserRepository.save(user);
+
+            DeleteMessage deleteMessage = DeleteMessage.builder()
                     .chatId(chatId)
                     .messageId(messageId)
                     .build();
 
+            telegramBot.deleteMessage(deleteMessage);
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("MENU")
+                    .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
+                    .build();
+
         } else if (data.startsWith("page:")) {
 
-            long id = Long.parseLong(data.split(":")[1]);
+            String pageEnumElement = data.split(":")[1];
 
-            int page = Integer.parseInt(data.split(":")[2]);
+            long id = Long.parseLong(data.split(":")[2]);
 
-            PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
+            int page = Integer.parseInt(data.split(":")[3]);
 
-            reviews.setCurrentPage(0);
+            if (pageEnumElement.equals(PageEnum.CAR_COMMENT.toString())) {
 
-            return getCarComments(id, reviews, chatId);
+                PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
+
+                reviews.setCurrentPage(0);
+
+                return getCarComments(id, reviews, chatId);
+
+            } else if (pageEnumElement.equals(PageEnum.OFFICE.toString())) {
+
+                PageableDTO<OfficeDTO> pageableDTO = officeClient.getAllOffices(page, 10);
+
+            }
         } else if (data.startsWith("car-favorite")) {
 
-            long carID = Long.parseLong(data.split(":")[1]);
+            return addOrRemoveFavorites(data, chatId, callbackId);
 
-            TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+        } else if (data.startsWith("car-booking:")) {
 
-            TgFavoriteDTO checkFavorite = favoriteClient.getCheckFavorite(user.getUserId(), carID);
+            return carBooking(chatId, messageId, data);
 
-            if (checkFavorite.isHave()) {
+        } else if (data.startsWith("for-")) {
 
-                favoriteClient.deleteFavorite(checkFavorite.getId());
+            EditMessageReplyMarkup replyMarkup = new EditMessageReplyMarkup();
 
-                return AnswerCallbackQuery.builder()
-                        .callbackQueryId(callbackId)
-                        .text("Sevimlilardan o'chirildi !")
+            replyMarkup.setChatId(chatId);
+            replyMarkup.setMessageId(messageId);
+            replyMarkup.setReplyMarkup(null);
+
+            telegramBot.editMessageReplyMarkup(replyMarkup);
+
+            if (data.equals("for-me")) {
+
+                telegramBot.getUserBookings().get(chatId).setForSelf(true);
+
+                PageableDTO<OfficeDTO> dtos = officeClient.getAllOffices(0, 10);
+
+                List<OfficeDTO> allOffices = dtos.getObjects();
+
+                StringBuilder message = new StringBuilder();
+
+                message.append("<b>\uD83D\uDCCD Qaysi ofisimizdan olib ketasiz?</b>").append("\n\n");
+
+                for (int i = 0; i < allOffices.size(); i++) {
+
+                    message.append(i + 1).append(" . ").append("<b>").append(allOffices.get(i).getName()).append("</b>").append("\n");
+                    message.append("Manzil: ").append(allOffices.get(i).getAddress()).append("\n\n");
+
+                }
+
+                user.setStep(StepEnum.PICKUP_OFFICE);
+
+                telegramUserRepository.save(user);
+
+                return EditMessageText.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .text(message.toString())
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(inlineButtonService.buildOffices(dtos))
+                        .build();
+
+
+            } else {
+
+
+            }
+
+        } else if (user.getStep().equals(StepEnum.PAYMENT_METHOD)) {
+
+            String paymentMethod = data.split(":")[1];
+
+            telegramBot.getUserBookings().get(chatId).setPaymentMethod(PaymetMethodEnum.valueOf(paymentMethod));
+
+            user.setStep(StepEnum.PROMO_CODE);
+
+            BookingCreateDTO dto = telegramBot.getUserBookings().get(chatId);
+
+            BookingDTO booking = bookingClient.createBooking(dto);
+
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
+
+            if (Objects.nonNull(booking)) {
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text(booking.toString())
+                        .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
                         .build();
 
             }
 
-            FavoriteDTO createDTO = new FavoriteDTO();
+        } else if (user.getStep().equals(StepEnum.PICKUP_OFFICE)) {
 
-            createDTO.setCarId(carID);
-            createDTO.setUserId(user.getUserId());
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
 
-            favoriteClient.createFavorite(createDTO);
+            telegramBot.deleteMessage(deleteMessage);
 
-            return AnswerCallbackQuery.builder()
-                    .callbackQueryId(callbackId)
-                    .text("Sevimlilarga qo'shildi !")
+            long pickupOfficeId = Long.parseLong(data.split(":")[1]);
+
+            telegramBot.getUserBookings().get(chatId).setPickupOfficeId(pickupOfficeId);
+
+            user.setStep(StepEnum.PICKUP_DATE);
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("""
+                            <b>\uD83D\uDCC5 Qachon olib ketasiz?</b>
+                            Iltimos, sanani quyidagi formatda kiriting:
+                            <code>2025-08-01 10:00</code>
+                            ⛔ Faqat shu formatdagi sana va vaqt qabul qilinadi.
+                            ✅ Format: <b>YYYY-MM-DD HH:mm</b>
+                            """)
+                    .parseMode(ParseMode.HTML)
+                    .replyMarkup(replyButtonService.buildCancelButton())
+                    .build();
+
+        } else if (user.getStep().equals(StepEnum.RETURN_OFFICE)) {
+
+            DeleteMessage deleteMessage = DeleteMessage.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            telegramBot.deleteMessage(deleteMessage);
+
+            long returnOfficeId = Long.parseLong(data.split(":")[1]);
+
+            telegramBot.getUserBookings().get(chatId).setReturnOfficeId(returnOfficeId);
+
+            user.setStep(StepEnum.RETURN_DATE);
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("""
+                            <b>\uD83D\uDCC5 Qachon qaytarasiz?</b>
+                            Iltimos, sanani quyidagi formatda kiriting:
+                            <code>2025-08-05 16:30</code>
+                            ⛔ Faqat shu formatdagi sana va vaqt qabul qilinadi.
+                            ✅ Format: <b>YYYY-MM-DD HH:mm</b>
+                            """)
+                    .replyMarkup(replyButtonService.buildCancelButton())
+                    .parseMode(ParseMode.HTML)
                     .build();
 
         }
@@ -172,8 +317,72 @@ public class CallbackServiceImpl implements CallbackService {
 
     }
 
+    private SendMessage carBooking(Long chatId, Integer messageId, String data) {
+
+        EditMessageReplyMarkup replyMarkup = new EditMessageReplyMarkup();
+
+        replyMarkup.setChatId(chatId);
+        replyMarkup.setMessageId(messageId);
+        replyMarkup.setReplyMarkup(null);
+
+        telegramBot.editMessageReplyMarkup(replyMarkup);
+
+        long carId = Long.parseLong(data.split(":")[1]);
+
+        BookingCreateDTO booking = new BookingCreateDTO();
+
+        booking.setCarId(carId);
+
+        telegramBot.getUserBookings().put(chatId, booking);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("""
+                        🚗 <b>Bron qilish jarayoni</b>
+                        
+                        Siz mashinani <b>oʻzingiz uchun</b> olasizmi yoki <b>boshqa birov uchun</b>?
+                        
+                        🔹 <i>Oʻzim uchun</i> — mening ismim va maʼlumotlarim bilan bron qilinadi.
+                        🔹 <i>Boshqa birov uchun</i> — boshqa shaxsning ism-sharifi va telefon raqamini kiriting.""")
+                .parseMode(ParseMode.HTML)
+                .replyMarkup(inlineButtonService.buildIsForSelfOr())
+                .build();
+    }
+
+    private AnswerCallbackQuery addOrRemoveFavorites(String data, Long chatId, String callbackId) {
+
+        long carID = Long.parseLong(data.split(":")[1]);
+
+        TelegramUser user = telegramUserRepository.findByChatIdOrThrowException(chatId);
+
+        TgFavoriteDTO checkFavorite = favoriteClient.getCheckFavorite(user.getUserId(), carID);
+
+        if (checkFavorite.isHave()) {
+
+            favoriteClient.deleteFavorite(checkFavorite.getId());
+
+            return AnswerCallbackQuery.builder()
+                    .callbackQueryId(callbackId)
+                    .text("Sevimlilardan o'chirildi !")
+                    .build();
+
+        }
+
+        FavoriteDTO createDTO = new FavoriteDTO();
+
+        createDTO.setCarId(carID);
+        createDTO.setUserId(user.getUserId());
+
+        favoriteClient.createFavorite(createDTO);
+
+        return AnswerCallbackQuery.builder()
+                .callbackQueryId(callbackId)
+                .text("Sevimlilarga qo'shildi !")
+                .build();
+    }
+
     private SendMessage getCarComments(long carId, PageableDTO<ReviewDTO> reviews, Long chatId) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(carId, reviews);
+        InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(carId, reviews, PageEnum.CAR_COMMENT);
 
         StringBuilder message = new StringBuilder();
 
