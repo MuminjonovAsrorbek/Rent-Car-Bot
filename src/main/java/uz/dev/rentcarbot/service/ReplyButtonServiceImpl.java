@@ -62,6 +62,12 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
 
             keyboardRows.add(firstKeyboardRow);
 
+            KeyboardRow thirdKeyboardRow = new KeyboardRow();
+
+            thirdKeyboardRow.add("Mening buyurtmalarim");
+
+            keyboardRows.add(thirdKeyboardRow);
+
             KeyboardRow secondKeyboardRow = new KeyboardRow();
 
             secondKeyboardRow.add("\uD83D\uDD14 Xabarnomalar");

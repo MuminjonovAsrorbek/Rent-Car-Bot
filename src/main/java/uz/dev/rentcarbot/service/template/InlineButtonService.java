@@ -25,4 +25,7 @@ public interface InlineButtonService {
     InlineKeyboardMarkup buildOffices(PageableDTO pageableDTO);
 
     InlineKeyboardMarkup buildYesOrNo(String prefix);
+
+    InlineKeyboardMarkup buildPenaltyMenu();
+
 }

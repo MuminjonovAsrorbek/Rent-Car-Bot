@@ -146,6 +146,23 @@ public class TextServiceImpl implements TextService {
                             .replyMarkup(inlineButtonService.buildAvailableCars())
                             .build();
 
+                } else if (text.equals("⚖️ Jarimalar")) {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("""
+                                    <b>⚖️ Jarimalar bo‘limi</b>
+                                    
+                                    Siz bu bo‘limda quyidagi ma’lumotlarni ko‘rishingiz mumkin: \s
+                                    \uD83C\uDD95 <b>Yangi jarimalar</b> — Hozirgi va to‘lanmagan jarimalaringiz ro‘yxati. \s
+                                    \uD83D\uDCDC <b>Barcha jarimalar</b> — Eski va yangi barcha jarimalaringiz tarixi.
+                                    
+                                    <i>Jarimalaringizni vaqtida to‘lab, muammolardan qoching \uD83D\uDE09</i>
+                                    """)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineButtonService.buildPenaltyMenu())
+                            .build();
+
                 }
 
             } else if (user.getStep().equals(StepEnum.PICKUP_DATE)) {
