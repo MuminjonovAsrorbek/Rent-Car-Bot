@@ -195,7 +195,21 @@ public class CallbackServiceImpl implements CallbackService {
                     return getNewPenalties(penalties, chatId, messageId, inlineKeyboardMarkup);
 
                 }
+            } else if (pageEnumElement.equals(PageEnum.BOOKING.toString())) {
 
+                PageableDTO<BookingDTO> myBookings = bookingClient.getMyBookings(page, 1);
+
+                StringBuilder message = textService.getUserBookings(myBookings, chatId);
+
+                myBookings.setCurrentPage(page);
+
+                return EditMessageText.builder()
+                        .chatId(chatId)
+                        .text(message.toString())
+                        .messageId(messageId)
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(inlineButtonService.buildPages(0L, myBookings, PageEnum.BOOKING))
+                        .build();
 
             }
 
@@ -503,6 +517,8 @@ public class CallbackServiceImpl implements CallbackService {
                     PageableDTO<PenaltyDTO> pageableDTO = penaltyClient.getMyPenalties(0, 3);
 
                     List<PenaltyDTO> penalties = pageableDTO.getObjects();
+
+                    pageableDTO.setCurrentPage(0);
 
                     if (penalties.isEmpty()) {
 

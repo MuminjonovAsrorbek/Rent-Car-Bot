@@ -8,12 +8,10 @@ import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import uz.dev.rentcarbot.client.AuthClient;
-import uz.dev.rentcarbot.client.CarClient;
-import uz.dev.rentcarbot.client.OfficeClient;
-import uz.dev.rentcarbot.client.PromoCodeClient;
+import uz.dev.rentcarbot.client.*;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.enums.PageEnum;
 import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.*;
@@ -52,8 +50,9 @@ public class TextServiceImpl implements TextService {
     private final OfficeClient officeClient;
     private final CarClient carClient;
     private final PromoCodeClient promoCodeClient;
+    private final BookingClient bookingClient;
 
-    public TextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, AuthClient authClient, TokenService tokenService, @Lazy MyTelegramBot myTelegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient) {
+    public TextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, AuthClient authClient, TokenService tokenService, @Lazy MyTelegramBot myTelegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient, BookingClient bookingClient) {
         this.userRepository = userRepository;
         this.replyButtonService = replyButtonService;
         this.inlineButtonService = inlineButtonService;
@@ -63,6 +62,7 @@ public class TextServiceImpl implements TextService {
         this.officeClient = officeClient;
         this.carClient = carClient;
         this.promoCodeClient = promoCodeClient;
+        this.bookingClient = bookingClient;
     }
 
     @Override
@@ -134,35 +134,51 @@ public class TextServiceImpl implements TextService {
 
             if (user.getStep().equals(StepEnum.SELECT_MENU)) {
 
-                if (text.equals("\uD83D\uDD11 Ijaraga olish")) {
+                switch (text) {
+                    case "\uD83D\uDD11 Ijaraga olish" -> {
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text("""
-                                    <b>\uD83D\uDE97 Ijaraga olish uchun mavjud mashinalar:</b>
-                                    <i>Quyidagi tugmani bosing va hozirda band bo‘lmagan avtomobillar ro‘yxatini ko‘ring.</i>
-                                    \s""")
-                            .parseMode(ParseMode.HTML)
-                            .replyMarkup(inlineButtonService.buildAvailableCars())
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("""
+                                        <b>\uD83D\uDE97 Ijaraga olish uchun mavjud mashinalar:</b>
+                                        <i>Quyidagi tugmani bosing va hozirda band bo‘lmagan avtomobillar ro‘yxatini ko‘ring.</i>
+                                        \s""")
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(inlineButtonService.buildAvailableCars())
+                                .build();
+                    }
+                    case "⚖️ Jarimalar" -> {
 
-                } else if (text.equals("⚖️ Jarimalar")) {
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("""
+                                        <b>⚖️ Jarimalar bo‘limi</b>
+                                        
+                                        Siz bu bo‘limda quyidagi ma’lumotlarni ko‘rishingiz mumkin: \s
+                                        \uD83C\uDD95 <b>Yangi jarimalar</b> — Hozirgi va to‘lanmagan jarimalaringiz ro‘yxati. \s
+                                        \uD83D\uDCDC <b>Barcha jarimalar</b> — Eski va yangi barcha jarimalaringiz tarixi.
+                                        
+                                        <i>Jarimalaringizni vaqtida to‘lab, muammolardan qoching \uD83D\uDE09</i>
+                                        """)
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(inlineButtonService.buildPenaltyMenu())
+                                .build();
+                    }
+                    case "Mening buyurtmalarim" -> {
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text("""
-                                    <b>⚖️ Jarimalar bo‘limi</b>
-                                    
-                                    Siz bu bo‘limda quyidagi ma’lumotlarni ko‘rishingiz mumkin: \s
-                                    \uD83C\uDD95 <b>Yangi jarimalar</b> — Hozirgi va to‘lanmagan jarimalaringiz ro‘yxati. \s
-                                    \uD83D\uDCDC <b>Barcha jarimalar</b> — Eski va yangi barcha jarimalaringiz tarixi.
-                                    
-                                    <i>Jarimalaringizni vaqtida to‘lab, muammolardan qoching \uD83D\uDE09</i>
-                                    """)
-                            .parseMode(ParseMode.HTML)
-                            .replyMarkup(inlineButtonService.buildPenaltyMenu())
-                            .build();
+                        PageableDTO<BookingDTO> myBookings = bookingClient.getMyBookings(0, 1);
 
+                        StringBuilder sendMessage = getUserBookings(myBookings, chatId);
+
+                        myBookings.setCurrentPage(0);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(sendMessage.toString())
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(inlineButtonService.buildPages(0L, myBookings, PageEnum.BOOKING))
+                                .build();
+                    }
                 }
 
             } else if (user.getStep().equals(StepEnum.PICKUP_DATE)) {
@@ -261,6 +277,70 @@ public class TextServiceImpl implements TextService {
                         """)
                 .build();
 
+    }
+
+    @Override
+    public StringBuilder getUserBookings(PageableDTO<BookingDTO> myBookings, Long chatId) {
+
+        StringBuilder sb = new StringBuilder();
+
+        List<BookingDTO> bookingDTOS = myBookings.getObjects();
+
+        BookingDTO booking = bookingDTOS.get(0);
+
+        sb.append("<b>📄 Booking Ma'lumotlari</b>\n\n");
+
+        sb.append("<b>🆔 Buyurtma ID:</b> ").append(booking.getId()).append("\n");
+        sb.append("<b>👤 Mijoz:</b> ").append(booking.getUserFullName()).append("\n");
+        sb.append("<b>📅 Status:</b> ").append(booking.getStatus()).append("\n\n");
+
+
+        sb.append("<b>🚗 Mashina</b>\n");
+        sb.append("• Brand: ").append(booking.getCarBrand()).append("\n");
+        sb.append("• Model: ").append(booking.getCarModel()).append("\n");
+        sb.append("• Joylar soni: ").append(booking.getCarSeats()).append("\n");
+        sb.append("• Yoqilg'i turi: ").append(booking.getCarFuelType()).append("\n");
+        sb.append("• Sarfi: ").append(booking.getCarFuelConsumption()).append(" L/100km\n");
+        sb.append("• Transmissiya: ").append(booking.getCarTransmission()).append("\n\n");
+
+
+        sb.append("<b>📆 Olish vaqti:</b> ").append(booking.getPickupDate()).append("\n");
+        sb.append("<b>📆 Qaytarish vaqti:</b> ").append(booking.getReturnDate()).append("\n\n");
+
+
+        if (booking.getPickupOffice() != null) {
+            sb.append("<b>📍 Olish ofisi:</b> ").append(booking.getPickupOffice().getName())
+                    .append(" — ").append(booking.getPickupOffice().getAddress()).append("\n");
+        }
+        if (booking.getReturnOffice() != null) {
+            sb.append("<b>📍 Qaytarish ofisi:</b> ").append(booking.getReturnOffice().getName())
+                    .append(" — ").append(booking.getReturnOffice().getAddress()).append("\n");
+        }
+        sb.append("\n");
+
+
+        sb.append("<b>👥 Kim uchun:</b> ").append(booking.getIsForSelf() ? "O‘zi uchun" : "Boshqa shaxs uchun").append("\n");
+        if (!booking.getIsForSelf()) {
+            sb.append("<b>👤 Qabul qiluvchi:</b> ").append(booking.getRecipientFullName()).append("\n");
+            sb.append("<b>📞 Tel:</b> ").append(booking.getRecipientPhone()).append("\n");
+        }
+        sb.append("\n");
+
+
+        if (booking.getPayment() != null) {
+            sb.append("<b>💳 To'lov</b>\n");
+            sb.append("• Summasi: ").append(booking.getPayment().getAmount()).append(" so'm\n");
+            sb.append("• Usuli: ").append(booking.getPayment().getPaymentMethod()).append("\n");
+            sb.append("• Status: ").append(booking.getPayment().getStatus()).append("\n\n");
+        }
+
+
+        sb.append("<b>🎁 Promokod:</b> ").append(booking.getHasPromoCode() ? "Bor" : "Yo‘q").append("\n");
+
+
+        sb.append("<b>💰 Umumiy narx:</b> ").append(booking.getTotalPrice()).append(" so'm\n");
+
+        return sb;
     }
 
     @Transactional
