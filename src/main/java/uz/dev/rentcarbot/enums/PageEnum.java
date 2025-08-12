@@ -7,6 +7,6 @@ package uz.dev.rentcarbot.enums;
 
 public enum PageEnum {
 
-    CAR_COMMENT, OFFICE
+    CAR_COMMENT, OFFICE , PENALTY
 
 }

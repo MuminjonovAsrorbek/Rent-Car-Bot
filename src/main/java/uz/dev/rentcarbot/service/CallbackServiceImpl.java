@@ -33,6 +33,7 @@ import uz.dev.rentcarbot.utils.ChatContextHolder;
 import java.io.File;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,8 +55,9 @@ public class CallbackServiceImpl implements CallbackService {
     private final OfficeClient officeClient;
     private final BookingClient bookingClient;
     private final TextService textService;
+    private final PenaltyClient penaltyClient;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient, TextService textService) {
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient, TextService textService, PenaltyClient penaltyClient) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
@@ -66,6 +68,7 @@ public class CallbackServiceImpl implements CallbackService {
         this.officeClient = officeClient;
         this.bookingClient = bookingClient;
         this.textService = textService;
+        this.penaltyClient = penaltyClient;
     }
 
     @Override
@@ -165,8 +168,37 @@ public class CallbackServiceImpl implements CallbackService {
                 pageableDTO.setCurrentPage(page);
 
 
+            } else if (pageEnumElement.equals(PageEnum.PENALTY.toString())) {
+
+                if (id == 0L) { // agarda 0 ge teng bo'lsa bu yangi jarimalarni olayotgan bo'ladi
+
+                    PageableDTO<PenaltyDTO> pageableDTO = penaltyClient.getMyOverdueReturns(page, 3);
+
+                    pageableDTO.setCurrentPage(page);
+
+                    List<PenaltyDTO> penalties = pageableDTO.getObjects();
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(0L, pageableDTO, PageEnum.PENALTY);
+
+                    return getNewPenalties(penalties, chatId, messageId, inlineKeyboardMarkup);
+
+                } else {
+
+                    PageableDTO<PenaltyDTO> pageableDTO = penaltyClient.getMyPenalties(page, 3);
+
+                    pageableDTO.setCurrentPage(page);
+
+                    List<PenaltyDTO> penalties = pageableDTO.getObjects();
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(1L, pageableDTO, PageEnum.PENALTY);
+
+                    return getNewPenalties(penalties, chatId, messageId, inlineKeyboardMarkup);
+
+                }
+
 
             }
+
         } else if (data.startsWith("car-favorite")) {
 
             return addOrRemoveFavorites(data, chatId, callbackId);
@@ -439,6 +471,59 @@ public class CallbackServiceImpl implements CallbackService {
 
             }
 
+        } else if (user.getStep().equals(StepEnum.SELECT_MENU)) {
+
+            if (data.startsWith("penalty-")) {
+
+                String string = data.split("-")[1];
+
+                if (string.equals("new")) {
+
+                    PageableDTO<PenaltyDTO> pageableDTO = penaltyClient.getMyOverdueReturns(0, 3);
+
+                    List<PenaltyDTO> penalties = pageableDTO.getObjects();
+
+                    if (penalties.isEmpty()) {
+
+                        return EditMessageText.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .text("<b>✅ Hozircha sizda jarimalar mavjud emas.</b>")
+                                .parseMode(ParseMode.HTML)
+                                .build();
+
+                    }
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(0L, pageableDTO, PageEnum.PENALTY);
+
+                    return getNewPenalties(penalties, chatId, messageId, inlineKeyboardMarkup);
+
+                } else {
+
+                    PageableDTO<PenaltyDTO> pageableDTO = penaltyClient.getMyPenalties(0, 3);
+
+                    List<PenaltyDTO> penalties = pageableDTO.getObjects();
+
+                    if (penalties.isEmpty()) {
+
+                        return EditMessageText.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .text("<b>✅ Hozircha sizda jarimalar mavjud emas.</b>")
+                                .parseMode(ParseMode.HTML)
+                                .build();
+
+                    }
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPages(1L, pageableDTO, PageEnum.PENALTY);
+
+                    return getNewPenalties(penalties, chatId, messageId, inlineKeyboardMarkup);
+
+
+                }
+
+            }
+
         }
 
         return SendMessage.builder()
@@ -449,6 +534,31 @@ public class CallbackServiceImpl implements CallbackService {
                         """)
                 .build();
 
+    }
+
+    private EditMessageText getNewPenalties(List<PenaltyDTO> penalties, Long chatId, Integer messageId, InlineKeyboardMarkup inlineKeyboardMarkup) {
+
+        StringBuilder sb = new StringBuilder();
+
+        for (PenaltyDTO p : penalties) {
+            sb.append("<b>⚠️ Jarima ID:</b> ").append(p.getId()).append("\n")
+                    .append("<b>📅 Sana:</b> ").append(p.getPenaltyDate().toLocalDateTime()
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append("\n")
+                    .append("<b>📅 Yangilangan:</b> ").append(p.getUpdatedAt().toLocalDateTime()
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append("\n")
+                    .append("<b>🚗 Booking ID:</b> ").append(p.getBookingId()).append("\n")
+                    .append("<b>💰 Miqdor:</b> ").append(p.getPenaltyAmount()).append(" so'm\n")
+                    .append("<b>⏳ Kechikkan kunlar:</b> ").append(p.getOverdueDays()).append(" kun\n")
+                    .append("<b>📌 Status:</b> ").append(p.getStatus()).append("\n\n");
+        }
+
+        return EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(sb.toString())
+                .parseMode(ParseMode.HTML)
+                .replyMarkup(inlineKeyboardMarkup)
+                .build();
     }
 
     private SendMessage carBooking(Long chatId, Integer messageId, String data) {
