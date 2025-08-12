@@ -2,6 +2,8 @@ package uz.dev.rentcarbot.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
@@ -56,8 +58,9 @@ public class UserCallbackServiceImpl implements UserCallbackService {
     private final BookingClient bookingClient;
     private final PenaltyClient penaltyClient;
     private final UserTextService userTextService;
+    private final NotificationClient notificationClient;
 
-    public UserCallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient, PenaltyClient penaltyClient, UserTextService userTextService) {
+    public UserCallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient, PenaltyClient penaltyClient, UserTextService userTextService, NotificationClient notificationClient) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
@@ -69,6 +72,7 @@ public class UserCallbackServiceImpl implements UserCallbackService {
         this.bookingClient = bookingClient;
         this.penaltyClient = penaltyClient;
         this.userTextService = userTextService;
+        this.notificationClient = notificationClient;
     }
 
     @Override
@@ -171,6 +175,10 @@ public class UserCallbackServiceImpl implements UserCallbackService {
             } else if (pageEnumElement.equals(PageEnum.BOOKING.toString())) {
 
                 return getBookingPage(page, chatId, messageId);
+
+            } else if (pageEnumElement.equals(PageEnum.NOTIFICATION.toString())) {
+
+                return getNotificationPage(page, chatId, messageId);
 
             }
 
@@ -415,6 +423,42 @@ public class UserCallbackServiceImpl implements UserCallbackService {
 
                 }
 
+            } else if (data.startsWith("notification")) {
+
+                if (data.equals("notification-read")) {
+
+                    ResponseEntity<?> responseEntity = notificationClient.markAllNotificationsAsRead();
+
+                    if (responseEntity.getStatusCode().equals(HttpStatus.OK)) {
+
+                        AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
+                                .callbackQueryId(callbackId)
+                                .text("Barcha xabalar o'qildi deb belgilandi ✅")
+                                .build();
+
+                        telegramBot.answerCallbackQuery(answerCallbackQuery);
+
+                        return getNotificationPage(0, chatId, messageId);
+                    }
+
+                } else {
+
+                    ResponseEntity<?> responseEntity = notificationClient.markAllNotificationsAsUnread();
+
+                    if (responseEntity.getStatusCode().equals(HttpStatus.OK)) {
+
+                        AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
+                                .callbackQueryId(callbackId)
+                                .text("Barcha xabalar o'qilmagan deb belgilandi \uD83D\uDCE9")
+                                .build();
+
+                        telegramBot.answerCallbackQuery(answerCallbackQuery);
+
+                        return getNotificationPage(0, chatId, messageId);
+                    }
+
+                }
+
             }
 
         }
@@ -427,6 +471,27 @@ public class UserCallbackServiceImpl implements UserCallbackService {
                         """)
                 .build();
 
+    }
+
+    private EditMessageText getNotificationPage(int page, Long chatId, Integer messageId) {
+
+        PageableDTO<NotificationDTO> allNotifications = notificationClient.getMyAllNotifications(page, 10);
+
+        allNotifications.setCurrentPage(page);
+
+        List<NotificationDTO> notifications = allNotifications.getObjects();
+
+        PageableDTO<NotificationDTO> myUnreadNotifications = notificationClient.getMyUnreadNotifications(page, 10);
+
+        String notification = userTextService.getNotification(allNotifications, myUnreadNotifications, notifications);
+
+        return EditMessageText.builder()
+                .chatId(chatId)
+                .text(notification)
+                .messageId(messageId)
+                .replyMarkup(inlineButtonService.buildNotificationPages(allNotifications, PageEnum.NOTIFICATION))
+                .parseMode(ParseMode.HTML)
+                .build();
     }
 
     private SendMessage getPromoCode(String data, TelegramUser user, Long chatId, Integer messageId) {

@@ -231,6 +231,7 @@ public class UserTextServiceImpl implements UserTextService {
 
     }
 
+    @Override
     public String getNotification(PageableDTO<NotificationDTO> allNotifications, PageableDTO<NotificationDTO> myUnreadNotifications, List<NotificationDTO> notifications) {
 
         StringBuilder sb = new StringBuilder();
