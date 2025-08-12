@@ -1,5 +1,6 @@
 package uz.dev.rentcarbot.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import uz.dev.rentcarbot.enums.PaymetMethodEnum;
 
@@ -14,8 +15,10 @@ public class BookingCreateDTO {
 
     private Long returnOfficeId;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime pickupDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime returnDate;
 
     private PaymetMethodEnum paymentMethod;

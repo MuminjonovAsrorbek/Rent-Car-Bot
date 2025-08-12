@@ -2,6 +2,7 @@ package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import uz.dev.rentcarbot.payload.BookingCreateDTO;
 import uz.dev.rentcarbot.payload.BookingDTO;
 
@@ -14,5 +15,5 @@ import uz.dev.rentcarbot.payload.BookingDTO;
 public interface BookingClient {
 
     @PostMapping
-    BookingDTO createBooking(BookingCreateDTO bookingCreateDTO);
+    BookingDTO createBooking(@RequestBody BookingCreateDTO bookingCreateDTO);
 }

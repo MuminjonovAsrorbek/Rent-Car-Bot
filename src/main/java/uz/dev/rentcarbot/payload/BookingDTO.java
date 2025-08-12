@@ -1,5 +1,6 @@
 package uz.dev.rentcarbot.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,8 +36,10 @@ public class BookingDTO implements Serializable {
 
     private TransmissionEnum carTransmission;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime pickupDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime returnDate;
 
     private Boolean isForSelf;
