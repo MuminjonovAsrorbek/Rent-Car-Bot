@@ -1,7 +1,9 @@
 package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import uz.dev.rentcarbot.payload.NotificationDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
@@ -19,5 +21,11 @@ public interface NotificationClient {
 
     @GetMapping("/my/unread-notifications")
     PageableDTO<NotificationDTO> getMyUnreadNotifications(@RequestParam int page, @RequestParam int size);
+
+    @PutMapping("/my/mark-all-as-read")
+    ResponseEntity<String> markAllNotificationsAsRead();
+
+    @PutMapping("/my/mark-all-as-unread")
+    ResponseEntity<String> markAllNotificationsAsUnread();
 
 }

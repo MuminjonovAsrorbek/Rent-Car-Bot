@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
@@ -73,6 +74,16 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
         try {
             execute(editMessageReplyMarkup);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public void answerCallbackQuery(AnswerCallbackQuery answerCallbackQuery) {
+
+        try {
+            execute(answerCallbackQuery);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }

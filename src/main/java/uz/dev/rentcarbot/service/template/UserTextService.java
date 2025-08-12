@@ -5,7 +5,10 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import uz.dev.rentcarbot.payload.BookingCreateDTO;
 import uz.dev.rentcarbot.payload.BookingDTO;
+import uz.dev.rentcarbot.payload.NotificationDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
+
+import java.util.List;
 
 /**
  * Created by: asrorbek
@@ -14,6 +17,8 @@ import uz.dev.rentcarbot.payload.PageableDTO;
 
 public interface UserTextService {
     BotApiMethod<?> process(Message message);
+
+    String getNotification(PageableDTO<NotificationDTO> allNotifications, PageableDTO<NotificationDTO> myUnreadNotifications, List<NotificationDTO> notifications);
 
     StringBuilder getUserBookings(PageableDTO<BookingDTO> myBookings, Long chatId);
 
