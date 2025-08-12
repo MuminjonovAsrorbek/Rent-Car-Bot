@@ -27,6 +27,7 @@ import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.CallbackService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
+import uz.dev.rentcarbot.service.template.TextService;
 import uz.dev.rentcarbot.utils.ChatContextHolder;
 
 import java.io.File;
@@ -44,21 +45,17 @@ import java.util.Objects;
 public class CallbackServiceImpl implements CallbackService {
 
     private final CarClient carClient;
-
     private final InlineButtonService inlineButtonService;
-
     private final MyTelegramBot telegramBot;
-
     private final TelegramUserRepository telegramUserRepository;
-
     private final ReviewClient reviewClient;
-
     private final FavoriteClient favoriteClient;
     private final ReplyButtonService replyButtonService;
     private final OfficeClient officeClient;
     private final BookingClient bookingClient;
+    private final TextService textService;
 
-    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient) {
+    public CallbackServiceImpl(CarClient carClient, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, TelegramUserRepository telegramUserRepository, ReviewClient reviewClient, FavoriteClient favoriteClient, ReplyButtonService replyButtonService, OfficeClient officeClient, BookingClient bookingClient, TextService textService) {
         this.carClient = carClient;
         this.inlineButtonService = inlineButtonService;
         this.telegramBot = telegramBot;
@@ -68,6 +65,7 @@ public class CallbackServiceImpl implements CallbackService {
         this.replyButtonService = replyButtonService;
         this.officeClient = officeClient;
         this.bookingClient = bookingClient;
+        this.textService = textService;
     }
 
     @Override
@@ -156,13 +154,17 @@ public class CallbackServiceImpl implements CallbackService {
 
                 PageableDTO<ReviewDTO> reviews = reviewClient.getReviewsByCarId(id, page, 6);
 
-                reviews.setCurrentPage(0);
+                reviews.setCurrentPage(page);
 
                 return getCarComments(id, reviews, chatId);
 
             } else if (pageEnumElement.equals(PageEnum.OFFICE.toString())) {
 
                 PageableDTO<OfficeDTO> pageableDTO = officeClient.getAllOffices(page, 10);
+
+                pageableDTO.setCurrentPage(page);
+
+
 
             }
         } else if (data.startsWith("car-favorite")) {
@@ -217,6 +219,24 @@ public class CallbackServiceImpl implements CallbackService {
 
             } else {
 
+                telegramBot.getUserBookings().get(chatId).setForSelf(false);
+
+                user.setStep(StepEnum.RECIPIENT_FULL_NAME);
+
+                telegramUserRepository.save(user);
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Qabul qiluvchining ism familiyasini kiriting :")
+                        .replyMarkup(replyButtonService.buildCancelButton())
+                        .build();
 
             }
 
@@ -228,26 +248,12 @@ public class CallbackServiceImpl implements CallbackService {
 
             user.setStep(StepEnum.PROMO_CODE);
 
-            BookingCreateDTO dto = telegramBot.getUserBookings().get(chatId);
-
-            BookingDTO booking = bookingClient.createBooking(dto);
-
-            DeleteMessage deleteMessage = DeleteMessage.builder()
+            return EditMessageText.builder()
                     .chatId(chatId)
                     .messageId(messageId)
+                    .text("Sizda promo code bormi ?")
+                    .replyMarkup(inlineButtonService.buildYesOrNo("promo-code"))
                     .build();
-
-            telegramBot.deleteMessage(deleteMessage);
-
-            if (Objects.nonNull(booking)) {
-
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text(booking.toString())
-                        .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
-                        .build();
-
-            }
 
         } else if (user.getStep().equals(StepEnum.PICKUP_OFFICE)) {
 
@@ -304,6 +310,134 @@ public class CallbackServiceImpl implements CallbackService {
                     .replyMarkup(replyButtonService.buildCancelButton())
                     .parseMode(ParseMode.HTML)
                     .build();
+
+        } else if (user.getStep().equals(StepEnum.PROMO_CODE)) {
+
+            if (data.equals("promo-code:yes")) {
+
+                user.setStep(StepEnum.SEND_PROMO_CODE);
+
+                telegramUserRepository.save(user);
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Promo Code kiriting !")
+                        .replyMarkup(replyButtonService.buildCancelButton())
+                        .build();
+
+            } else {
+
+                BookingCreateDTO dto = telegramBot.getUserBookings().get(chatId);
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .messageId(messageId)
+                        .chatId(chatId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                user.setStep(StepEnum.CHECKED_BOOKING);
+
+                telegramUserRepository.save(user);
+
+                return textService.checkedBooking(dto, chatId);
+
+            }
+
+        } else if (user.getStep().equals(StepEnum.CHECKED_BOOKING)) {
+
+            String yerOrNo = data.split(":")[1];
+
+            if (yerOrNo.equals("yes")) {
+
+                BookingCreateDTO dto = telegramBot.getUserBookings().get(chatId);
+
+                BookingDTO booking = bookingClient.createBooking(dto);
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                telegramBot.getUserBookings().remove(chatId);
+
+                user.setStep(StepEnum.SELECT_MENU);
+
+                telegramUserRepository.save(user);
+
+                if (Objects.nonNull(booking)) {
+
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("<b>✅ Buyurtma qabul qilindi!</b>\n\n");
+
+                    sb.append("<b>🆔 Bron ID:</b> ").append(booking.getId()).append("\n");
+                    sb.append("<b>👤 Foydalanuvchi:</b> ").append(booking.getUserFullName()).append("\n\n");
+
+                    sb.append("<b>🚗 Mashina:</b> ").append(booking.getCarBrand())
+                            .append(" ").append(booking.getCarModel()).append("\n");
+                    sb.append("<b>🪑 O‘rindiqlar:</b> ").append(booking.getCarSeats()).append("\n");
+                    sb.append("<b>⚡ Yoqilg‘i turi:</b> ").append(booking.getCarFuelType()).append("\n");
+                    sb.append("<b>⛽ Sarfi:</b> ").append(booking.getCarFuelConsumption()).append(" L/100km\n");
+                    sb.append("<b>⚙ Uzatmalar qutisi:</b> ").append(booking.getCarTransmission()).append("\n\n");
+
+                    sb.append("<b>📍 Olish ofisi:</b> ").append(booking.getPickupOffice().getName())
+                            .append(" (").append(booking.getPickupOffice().getAddress()).append(")\n");
+                    sb.append("<b>📍 Qaytarish ofisi:</b> ").append(booking.getReturnOffice().getName())
+                            .append(" (").append(booking.getReturnOffice().getAddress()).append(")\n\n");
+
+                    sb.append("<b>📅 Olish sanasi:</b> ").append(booking.getPickupDate()).append("\n");
+                    sb.append("<b>📅 Qaytarish sanasi:</b> ").append(booking.getReturnDate()).append("\n\n");
+
+                    if (!booking.getIsForSelf()) {
+                        sb.append("<b>🎁 Olishchi:</b> ").append(booking.getRecipientFullName()).append("\n");
+                        sb.append("<b>📞 Telefon:</b> ").append(booking.getRecipientPhone()).append("\n\n");
+                    }
+
+                    sb.append("<b>💰 Umumiy narx:</b> ").append(String.format("%,d", booking.getTotalPrice())).append(" so‘m\n");
+                    sb.append("<b>💳 To‘lov turi:</b> ").append(booking.getPayment().getPaymentMethod()).append("\n");
+                    sb.append("<b>📌 Status:</b> ").append(booking.getStatus()).append("\n");
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sb.toString())
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
+                            .build();
+
+                }
+
+            } else {
+
+                telegramBot.getUserBookings().remove(chatId);
+
+                user.setStep(StepEnum.SELECT_MENU);
+
+                telegramUserRepository.save(user);
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(user.getRole()))
+                        .build();
+
+            }
 
         }
 

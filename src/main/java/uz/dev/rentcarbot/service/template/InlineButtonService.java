@@ -23,4 +23,6 @@ public interface InlineButtonService {
     InlineKeyboardMarkup buildPaymentMethod();
 
     InlineKeyboardMarkup buildOffices(PageableDTO pageableDTO);
+
+    InlineKeyboardMarkup buildYesOrNo(String prefix);
 }

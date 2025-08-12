@@ -273,7 +273,31 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
 
-        return  inlineKeyboardMarkup;
+        return inlineKeyboardMarkup;
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildYesOrNo(String prefix) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("Ha");
+        firstBtn.setCallbackData(prefix + ":yes");
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setCallbackData(prefix + ":no");
+        secondBtn.setText("Yo'q");
+
+        keyboard.add(List.of(firstBtn, secondBtn));
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
     }
 
 }

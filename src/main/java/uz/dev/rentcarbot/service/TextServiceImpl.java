@@ -9,14 +9,14 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import uz.dev.rentcarbot.client.AuthClient;
+import uz.dev.rentcarbot.client.CarClient;
 import uz.dev.rentcarbot.client.OfficeClient;
+import uz.dev.rentcarbot.client.PromoCodeClient;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
-import uz.dev.rentcarbot.payload.OfficeDTO;
-import uz.dev.rentcarbot.payload.PageableDTO;
-import uz.dev.rentcarbot.payload.TokenDTO;
+import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
@@ -28,6 +28,7 @@ import uz.dev.rentcarbot.utils.DateTimeValidator;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Created by: asrorbek
@@ -49,8 +50,10 @@ public class TextServiceImpl implements TextService {
 
     private final MyTelegramBot telegramBot;
     private final OfficeClient officeClient;
+    private final CarClient carClient;
+    private final PromoCodeClient promoCodeClient;
 
-    public TextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, AuthClient authClient, TokenService tokenService, @Lazy MyTelegramBot myTelegramBot, OfficeClient officeClient) {
+    public TextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, AuthClient authClient, TokenService tokenService, @Lazy MyTelegramBot myTelegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient) {
         this.userRepository = userRepository;
         this.replyButtonService = replyButtonService;
         this.inlineButtonService = inlineButtonService;
@@ -58,6 +61,8 @@ public class TextServiceImpl implements TextService {
         this.tokenService = tokenService;
         this.telegramBot = myTelegramBot;
         this.officeClient = officeClient;
+        this.carClient = carClient;
+        this.promoCodeClient = promoCodeClient;
     }
 
     @Override
@@ -67,6 +72,8 @@ public class TextServiceImpl implements TextService {
         String text = message.getText();
 
         Long chatId = message.getChatId();
+
+        Integer messageId = message.getMessageId();
 
         if (text.startsWith("/")) {
 
@@ -166,6 +173,65 @@ public class TextServiceImpl implements TextService {
 
                 }
 
+            } else if (user.getStep().equals(StepEnum.SEND_PROMO_CODE)) {
+
+                return sendPromoCode(chatId, text, user);
+
+            } else if (user.getStep().equals(StepEnum.RECIPIENT_FULL_NAME)) {
+
+                telegramBot.getUserBookings().get(chatId).setRecipientFullName(text);
+
+                user.setStep(StepEnum.RECIPIENT_PHONE);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Qabul qiluvchining telefon raqamini kiriting :")
+                        .build();
+
+            } else if (user.getStep().equals(StepEnum.RECIPIENT_PHONE)) {
+
+                Pattern regex = Pattern.compile("^\\+998\\d{9}$");
+
+                if (regex.matcher(text).matches()) {
+
+                    telegramBot.getUserBookings().get(chatId).setRecipientPhone(text);
+
+                    PageableDTO<OfficeDTO> dtos = officeClient.getAllOffices(0, 10);
+
+                    List<OfficeDTO> allOffices = dtos.getObjects();
+
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("<b>\uD83D\uDCCD Qaysi ofisimizdan olib ketasiz?</b>").append("\n\n");
+
+                    for (int i = 0; i < allOffices.size(); i++) {
+
+                        sb.append(i + 1).append(" . ").append("<b>").append(allOffices.get(i).getName()).append("</b>").append("\n");
+                        sb.append("Manzil: ").append(allOffices.get(i).getAddress()).append("\n\n");
+
+                    }
+
+                    user.setStep(StepEnum.PICKUP_OFFICE);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sb.toString())
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineButtonService.buildOffices(dtos))
+                            .build();
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Telefon raqami formati notog'ri . Misol : +998912345678")
+                            .build();
+
+                }
+
             }
 
         }
@@ -178,6 +244,99 @@ public class TextServiceImpl implements TextService {
                         """)
                 .build();
 
+    }
+
+    @Transactional
+    public SendMessage sendPromoCode(Long chatId, String text, TelegramUser user) {
+
+        BookingCreateDTO dto = telegramBot.getUserBookings().get(chatId);
+
+        if (text.equals("Orqaga")) {
+
+            user.setStep(StepEnum.CHECKED_BOOKING);
+
+            userRepository.save(user);
+
+            return checkedBooking(dto, chatId);
+
+        } else {
+
+            boolean exists = promoCodeClient.codeValidate(text);
+
+            if (exists) {
+
+                dto.setPromoCode(text);
+
+                user.setStep(StepEnum.CHECKED_BOOKING);
+
+                userRepository.save(user);
+
+                return checkedBooking(dto, chatId);
+
+            } else {
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Siz kiritgan " + text + " promo-code topilmadi !")
+                        .build();
+
+            }
+
+        }
+    }
+
+    @Override
+    public SendMessage checkedBooking(BookingCreateDTO dto, Long chatId) {
+
+        CarDTO car = carClient.getCarById(dto.getCarId());
+
+        OfficeDTO pickupOffice = officeClient.getOfficeById(dto.getPickupOfficeId());
+
+        OfficeDTO returnOffice = officeClient.getOfficeById(dto.getPickupOfficeId());
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("<b>📋 Bron ma'lumotlari</b>\n\n");
+
+        sb.append("<b>🚗 Avtomobil:</b> ")
+                .append(car.getBrand()).append(" ")
+                .append(car.getModel())
+                .append(" (").append(car.getSeats()).append(" o‘rinli, ")
+                .append(car.getFuelType()).append(", ")
+                .append(car.getTransmission()).append(")\n\n");
+
+        sb.append("<b>📍 Olish manzili:</b> ")
+                .append(pickupOffice.getName())
+                .append(" — ").append(pickupOffice.getAddress()).append("\n");
+
+        sb.append("<b>📍 Qaytarish manzili:</b> ")
+                .append(returnOffice.getName())
+                .append(" — ").append(returnOffice.getAddress()).append("\n\n");
+
+        sb.append("<b>📅 Olish vaqti:</b> ").append(dto.getPickupDate()).append("\n");
+        sb.append("<b>📅 Qaytarish vaqti:</b> ").append(dto.getReturnDate()).append("\n\n");
+
+        sb.append("<b>💳 To‘lov turi:</b> ").append(dto.getPaymentMethod()).append("\n");
+
+        if (dto.isForSelf()) {
+            sb.append("<b>👤 Kim uchun:</b> O‘zi uchun\n");
+        } else {
+            sb.append("<b>👤 Qabul qiluvchi:</b> ").append(dto.getRecipientFullName()).append("\n");
+            sb.append("<b>📞 Telefon:</b> ").append(dto.getRecipientPhone()).append("\n");
+        }
+
+        if (dto.getPromoCode() != null && !dto.getPromoCode().isBlank()) {
+            sb.append("<b>🎟 Promo kod:</b> ").append(dto.getPromoCode()).append("\n");
+        }
+
+        sb.append("\n<b>✅ Ma'lumotlar to‘g‘rimi?</b>");
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text(sb.toString())
+                .parseMode(ParseMode.HTML)
+                .replyMarkup(inlineButtonService.buildYesOrNo("booking"))
+                .build();
     }
 
     private SendMessage returnDate(String text, TelegramUser user, Long chatId) {
