@@ -153,7 +153,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
-    private static List<InlineKeyboardButton> getNextAndPrevBtns(Long id, PageableDTO pageableDTO, PageEnum pageEnum) {
+    private List<InlineKeyboardButton> getNextAndPrevBtns(Long id, PageableDTO pageableDTO, PageEnum pageEnum) {
         List<InlineKeyboardButton> row = new ArrayList<>();
 
         if (pageableDTO.isHasPrevious()) {
@@ -320,6 +320,35 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         secondBtn.setCallbackData("penalty-all");
 
         keyboard.add(List.of(secondBtn));
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildNotificationPages(PageableDTO pageableDTO, PageEnum pageEnum) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("✅ Hammasini o‘qildi");
+        firstBtn.setCallbackData("notification-read");
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("\uD83D\uDCE9 O‘qilmaganlar");
+        secondBtn.setCallbackData("notification-unread");
+
+        keyboard.add(List.of(firstBtn, secondBtn));
+
+        List<InlineKeyboardButton> row = getNextAndPrevBtns(0L, pageableDTO, pageEnum);
+
+        keyboard.add(row);
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
 
