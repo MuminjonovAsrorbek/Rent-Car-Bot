@@ -96,7 +96,21 @@ public class AdminTextServiceImpl implements AdminTextService {
 
         } else if (user.getStep().toString().startsWith("BOOKING_")) {
 
-            Pattern pattern = Pattern.compile("^\\d+$\n");
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            Pattern pattern = Pattern.compile("^\\d+$");
 
             if (pattern.matcher(text).matches()) {
 
@@ -143,6 +157,20 @@ public class AdminTextServiceImpl implements AdminTextService {
             }
 
         } else if (user.getStep().toString().startsWith("PAYMENT_")) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
 
             Pattern pattern = Pattern.compile("^\\d+$\n");
 
