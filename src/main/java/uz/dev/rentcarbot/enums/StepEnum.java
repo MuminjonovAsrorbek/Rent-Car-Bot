@@ -7,6 +7,7 @@ package uz.dev.rentcarbot.enums;
 
 public enum StepEnum {
 
+    //only for users
     START,
     SEND_PHONE_NUMBER,
     SELECT_MENU,
@@ -19,6 +20,9 @@ public enum StepEnum {
     RECIPIENT_PHONE,
     PROMO_CODE,
     SEND_PROMO_CODE,
-    CHECKED_BOOKING
+    CHECKED_BOOKING,
+
+    // only for admins
+    SELECT_MENU_ADMIN
 
 }

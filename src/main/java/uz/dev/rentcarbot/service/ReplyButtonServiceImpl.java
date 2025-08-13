@@ -78,6 +78,39 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
             replyKeyboardMarkup.setKeyboard(keyboardRows);
 
             return replyKeyboardMarkup;
+        } else if (role.equals(RoleEnum.ADMIN)) {
+
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+
+            replyKeyboardMarkup.setSelective(true);
+            replyKeyboardMarkup.setResizeKeyboard(true);
+
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+            KeyboardRow firstKeyboardRow = new KeyboardRow();
+
+            firstKeyboardRow.add("\uD83D\uDC64 Foydalanuvchilar");
+            firstKeyboardRow.add("\uD83D\uDE97 Avtomobillar");
+
+            keyboardRows.add(firstKeyboardRow);
+
+            KeyboardRow secondKeyboardRow = new KeyboardRow();
+
+            secondKeyboardRow.add("\uD83D\uDCE6 Buyurtmalar");
+            secondKeyboardRow.add("⚠ Jarimalar");
+
+            keyboardRows.add(secondKeyboardRow);
+
+            KeyboardRow thirdKeyboardRow = new KeyboardRow();
+
+            thirdKeyboardRow.add("\uD83D\uDCE2 E’lonlar");
+
+            keyboardRows.add(thirdKeyboardRow);
+
+            replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+            return replyKeyboardMarkup;
+
         }
 
         return null;
