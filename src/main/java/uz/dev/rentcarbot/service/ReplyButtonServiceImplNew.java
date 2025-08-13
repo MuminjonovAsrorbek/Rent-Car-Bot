@@ -18,7 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReplyButtonServiceImpl implements ReplyButtonService {
+public class ReplyButtonServiceImplNew implements ReplyButtonService {
 
 
     @Override
@@ -80,34 +80,7 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
             return replyKeyboardMarkup;
         } else if (role.equals(RoleEnum.ADMIN)) {
 
-            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-
-            replyKeyboardMarkup.setSelective(true);
-            replyKeyboardMarkup.setResizeKeyboard(true);
-
-            List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-            KeyboardRow firstKeyboardRow = new KeyboardRow();
-
-            firstKeyboardRow.add("\uD83D\uDC64 Foydalanuvchilar");
-            firstKeyboardRow.add("\uD83D\uDE97 Avtomobillar");
-
-            keyboardRows.add(firstKeyboardRow);
-
-            KeyboardRow secondKeyboardRow = new KeyboardRow();
-
-            secondKeyboardRow.add("\uD83D\uDCE6 Buyurtmalar");
-            secondKeyboardRow.add("⚠ Jarimalar");
-
-            keyboardRows.add(secondKeyboardRow);
-
-            KeyboardRow thirdKeyboardRow = new KeyboardRow();
-
-            thirdKeyboardRow.add("\uD83D\uDCE2 E’lonlar");
-
-            keyboardRows.add(thirdKeyboardRow);
-
-            replyKeyboardMarkup.setKeyboard(keyboardRows);
+            ReplyKeyboardMarkup replyKeyboardMarkup = getReplyKeyboardMarkup();
 
             return replyKeyboardMarkup;
 
@@ -115,6 +88,46 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
 
         return null;
 
+    }
+
+    private static ReplyKeyboardMarkup getReplyKeyboardMarkup() {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow firstKeyboardRow = new KeyboardRow();
+
+        firstKeyboardRow.add("\uD83D\uDC64 Foydalanuvchilar");
+        firstKeyboardRow.add("\uD83D\uDE97 Avtomobillar");
+
+        keyboardRows.add(firstKeyboardRow);
+
+        KeyboardRow secondKeyboardRow = new KeyboardRow();
+
+        secondKeyboardRow.add("\uD83D\uDCE6 Buyurtmalar");
+        secondKeyboardRow.add("⚠ Jarimalar");
+
+        keyboardRows.add(secondKeyboardRow);
+
+        KeyboardRow thirdKeyboardRow = new KeyboardRow();
+
+        thirdKeyboardRow.add("🏢 Ofislar");
+        thirdKeyboardRow.add("📂 Kategoriyalar");
+
+        keyboardRows.add(thirdKeyboardRow);
+
+        KeyboardRow fourthKeyboardRow = new KeyboardRow();
+
+        fourthKeyboardRow.add("🎟️ Promo kodlar");
+        fourthKeyboardRow.add("📢 E'lonlar");
+
+        keyboardRows.add(fourthKeyboardRow);
+
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+        return replyKeyboardMarkup;
     }
 
     @Override
