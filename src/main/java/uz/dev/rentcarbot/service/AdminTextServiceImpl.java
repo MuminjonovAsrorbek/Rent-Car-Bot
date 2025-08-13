@@ -9,18 +9,21 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import uz.dev.rentcarbot.client.BookingClient;
 import uz.dev.rentcarbot.client.PaymentClient;
+import uz.dev.rentcarbot.client.PenaltyClient;
 import uz.dev.rentcarbot.client.StatisticsClient;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.BookingDTO;
 import uz.dev.rentcarbot.payload.PaymentDTO;
+import uz.dev.rentcarbot.payload.PenaltyDTO;
 import uz.dev.rentcarbot.payload.UserStatisticDTO;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.AdminTextService;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -38,14 +41,16 @@ public class AdminTextServiceImpl implements AdminTextService {
     private final BookingClient bookingClient;
     private final ReplyButtonService replyButtonService;
     private final PaymentClient paymentClient;
+    private final PenaltyClient penaltyClient;
 
-    public AdminTextServiceImpl(TelegramUserRepository userRepository, StatisticsClient statisticsClient, InlineButtonService inlineButtonService, BookingClient bookingClient, ReplyButtonService replyButtonService, PaymentClient paymentClient) {
+    public AdminTextServiceImpl(TelegramUserRepository userRepository, StatisticsClient statisticsClient, InlineButtonService inlineButtonService, BookingClient bookingClient, ReplyButtonService replyButtonService, PaymentClient paymentClient, PenaltyClient penaltyClient) {
         this.userRepository = userRepository;
         this.statisticsClient = statisticsClient;
         this.inlineButtonService = inlineButtonService;
         this.bookingClient = bookingClient;
         this.replyButtonService = replyButtonService;
         this.paymentClient = paymentClient;
+        this.penaltyClient = penaltyClient;
     }
 
     @Override
@@ -60,38 +65,67 @@ public class AdminTextServiceImpl implements AdminTextService {
 
         if (user.getStep().equals(StepEnum.SELECT_MENU_ADMIN)) {
 
-            if (text.equals("\uD83D\uDC64 Foydalanuvchilar")) {
+            switch (text) {
+                case "\uD83D\uDC64 Foydalanuvchilar" -> {
 
-                String sb = getStatistics();
+                    String sb = getStatistics();
 
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text(sb)
-                        .parseMode(ParseMode.HTML)
-                        .build();
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sb)
+                            .parseMode(ParseMode.HTML)
+                            .build();
+                }
+                case "\uD83D\uDCE6 Buyurtmalar" -> {
 
-            } else if (text.equals("\uD83D\uDCE6 Buyurtmalar")) {
+                    String sendMessage = """
+                            <b>📦 Buyurtmalar</b>
+                            
+                            Bu bo‘limda siz quyidagilarni amalga oshirishingiz mumkin:
+                            ✅ Buyurtmani <b>tasdiqlash</b>
+                            📥 Buyurtmani <b>qabul qilish</b>
+                            ❌ Buyurtmani <b>bekor qilish</b>
+                            💳 To‘lovni <b>tasdiqlash</b>
+                            🚫 To‘lovni <b>bekor qilish</b>
+                            """;
 
-                String sendMessage = """
-                        <b>📦 Buyurtmalar</b>
-                        
-                        Bu bo‘limda siz quyidagilarni amalga oshirishingiz mumkin:
-                        ✅ Buyurtmani <b>tasdiqlash</b>
-                        📥 Buyurtmani <b>qabul qilish</b>
-                        ❌ Buyurtmani <b>bekor qilish</b>
-                        💳 To‘lovni <b>tasdiqlash</b>
-                        🚫 To‘lovni <b>bekor qilish</b>
-                        """;
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildBookingMenu();
 
-                InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildBookingMenu();
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sendMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineKeyboardMarkup)
+                            .build();
 
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text(sendMessage)
-                        .parseMode(ParseMode.HTML)
-                        .replyMarkup(inlineKeyboardMarkup)
-                        .build();
+                }
+                case "⚠ Jarimalar" -> {
 
+                    String sendMessage = """
+                             <b>⚠ Jarimalar bo‘limi</b>
+                            \s
+                             Bu bo‘limda siz quyidagi amallarni bajarishingiz mumkin:
+                            \s
+                             1️⃣ <b>Jarimani tasdiqlash</b> \s
+                             2️⃣ <b>Jarimani bekor qilish</b> \s
+                            \s
+                             Amallarni ikki xil usulda bajarish mumkin: \s
+                             - <b>Booking ID</b> orqali \s
+                             - <b>Penalty ID</b> orqali \s
+                            \s
+                             <i>Kerakli amalni tanlash uchun quyidagi tugmalardan foydalaning.</i>
+                            \s""";
+
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPenaltyMenuForAdmin();
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sendMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineKeyboardMarkup)
+                            .build();
+                }
             }
 
         } else if (user.getStep().toString().startsWith("BOOKING_")) {
@@ -214,6 +248,111 @@ public class AdminTextServiceImpl implements AdminTextService {
 
             }
 
+        } else if (user.getStep().toString().startsWith("PENALTY_")) {
+
+            if (user.getStep().toString().startsWith("PENALTY_BOOKING_")) {
+
+                if (text.equals("Orqaga")) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("MENU")
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+
+                }
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    PenaltyDTO penaltyDTO;
+
+                    long bookingId = Long.parseLong(text);
+
+                    if (user.getStep().equals(StepEnum.PENALTY_BOOKING_CONFIRM)) {
+
+                        penaltyDTO = penaltyClient.confirmPenalty(bookingId);
+
+                    } else {
+
+                        penaltyDTO = penaltyClient.cancelPenaltyWithBookingId(bookingId);
+
+                    }
+
+                    if (Objects.nonNull(penaltyDTO)) {
+
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                        userRepository.save(user);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(buildPenaltyMessage(penaltyDTO))
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                                .build();
+
+                    }
+                }
+
+            } else {
+
+                if (text.equals("Orqaga")) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("MENU")
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+
+                }
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    PenaltyDTO penaltyDTO;
+
+                    long penaltyId = Long.parseLong(text);
+
+                    if (user.getStep().equals(StepEnum.PENALTY_CONFIRM)) {
+
+                        penaltyDTO = penaltyClient.confirmPenaltyWithPenaltyId(penaltyId);
+
+                    } else {
+
+                        penaltyDTO = penaltyClient.cancelPenaltyWithPenaltyId(penaltyId);
+
+                    }
+
+                    if (Objects.nonNull(penaltyDTO)) {
+
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                        userRepository.save(user);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(buildPenaltyMessage(penaltyDTO))
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                                .build();
+
+                    }
+
+                }
+
+            }
+
         }
 
         return SendMessage.builder()
@@ -223,6 +362,22 @@ public class AdminTextServiceImpl implements AdminTextService {
                         Iltimos, mavjud komandalarni ishlating.
                         """)
                 .build();
+
+    }
+
+    public String buildPenaltyMessage(PenaltyDTO p) {
+
+        return "<b>⚠️ Jarima ID:</b> " + p.getId() + "\n" +
+                "<b>📅 Sana:</b> " + p.getPenaltyDate().toLocalDateTime()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) +
+                "\n" +
+                "<b>📅 Yangilangan:</b> " + p.getUpdatedAt().toLocalDateTime()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) +
+                "\n" +
+                "<b>🚗 Booking ID:</b> " + p.getBookingId() + "\n" +
+                "<b>💰 Miqdor:</b> " + p.getPenaltyAmount() + " so'm\n" +
+                "<b>⏳ Kechikkan kunlar:</b> " + p.getOverdueDays() + " kun\n" +
+                "<b>📌 Status:</b> " + p.getStatus() + "\n\n";
 
     }
 

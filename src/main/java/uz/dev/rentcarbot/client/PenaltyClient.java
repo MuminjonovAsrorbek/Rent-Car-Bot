@@ -2,6 +2,8 @@ package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import uz.dev.rentcarbot.payload.PageableDTO;
 import uz.dev.rentcarbot.payload.PenaltyDTO;
@@ -19,5 +21,17 @@ public interface PenaltyClient {
 
     @GetMapping("/me/all-penalties")
     PageableDTO<PenaltyDTO> getMyPenalties(@RequestParam int page, @RequestParam int size);
+
+    @PutMapping("/confirm/{bookingId}/booking")
+    PenaltyDTO confirmPenalty(@PathVariable Long bookingId);
+
+    @PutMapping("/confirm/{penaltyId}/penalty")
+    PenaltyDTO confirmPenaltyWithPenaltyId(@PathVariable Long penaltyId);
+
+    @PutMapping("/cancel/{bookingId}/booking")
+    PenaltyDTO cancelPenaltyWithBookingId(@PathVariable Long bookingId);
+
+    @PutMapping("/cancel/{penaltyId}/penalty")
+    PenaltyDTO cancelPenaltyWithPenaltyId(@PathVariable Long penaltyId);
 
 }
