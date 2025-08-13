@@ -199,7 +199,7 @@ public class AdminTextServiceImpl implements AdminTextService {
                     return SendMessage.builder()
                             .chatId(chatId)
                             .text(buildPaymentMessage(paymentDTO))
-                            .parseMode(ParseMode.HTML)
+                            .parseMode(ParseMode.MARKDOWN)
                             .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                             .build();
 
