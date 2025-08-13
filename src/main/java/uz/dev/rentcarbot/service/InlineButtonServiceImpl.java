@@ -435,4 +435,40 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
+    @Override
+    public InlineKeyboardMarkup buildPenaltyMenuForAdmin() {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("✅ Tasdiqlash (Booking ID)");
+        firstBtn.setCallbackData("penalty-booking-confirm");
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("❌ Bekor qilish (Booking ID)");
+        secondBtn.setCallbackData("penalty-booking-cancel");
+
+        keyboard.add(List.of(firstBtn, secondBtn));
+
+        InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
+
+        thirdBtn.setText("✅ Tasdiqlash (Penalty ID)");
+        thirdBtn.setCallbackData("penalty-confirm");
+
+        InlineKeyboardButton fourthBtn = new InlineKeyboardButton();
+
+        fourthBtn.setText("❌ Bekor qilish (Penalty ID)");
+        fourthBtn.setCallbackData("penalty-cancel");
+
+        keyboard.add(List.of(firstBtn, fourthBtn));
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+    }
+
 }

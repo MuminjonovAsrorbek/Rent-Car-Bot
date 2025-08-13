@@ -49,79 +49,85 @@ public class AdminCallbackServiceImpl implements AdminCallbackService {
 
             if (data.startsWith("booking-")) {
 
-                if (data.equals("booking-confirm")) {
+                switch (data) {
+                    case "booking-confirm" -> {
 
-                    String senMessage = "✍️ Tasdiqlash uchun buyurtma ID raqamini kiriting:\n" +
-                            "(Masalan: 123)";
+                        String senMessage = "✍️ Tasdiqlash uchun buyurtma ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
 
-                    user.setStep(StepEnum.BOOKING_CONFIRM);
+                        user.setStep(StepEnum.BOOKING_CONFIRM);
 
-                    telegramUserRepository.save(user);
+                        telegramUserRepository.save(user);
 
-                    DeleteMessage deleteMessage = DeleteMessage.builder()
-                            .chatId(chatId)
-                            .messageId(messageId)
-                            .build();
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
 
-                    myTelegramBot.deleteMessage(deleteMessage);
+                        myTelegramBot.deleteMessage(deleteMessage);
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text(senMessage)
-                            .replyMarkup(replyButtonService.buildCancelButton())
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(senMessage)
+                                .replyMarkup(replyButtonService.buildCancelButton())
+                                .build();
 
-                } else if (data.equals("booking-complete")) {
+                    }
+                    case "booking-complete" -> {
 
-                    String senMessage = "✍️ Tugatish uchun buyurtma ID raqamini kiriting:\n" +
-                            "(Masalan: 123)";
+                        String senMessage = "✍️ Tugatish uchun buyurtma ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
 
-                    user.setStep(StepEnum.BOOKING_COMPLETE);
+                        user.setStep(StepEnum.BOOKING_COMPLETE);
 
-                    telegramUserRepository.save(user);
+                        telegramUserRepository.save(user);
 
-                    DeleteMessage deleteMessage = DeleteMessage.builder()
-                            .chatId(chatId)
-                            .messageId(messageId)
-                            .build();
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
 
-                    myTelegramBot.deleteMessage(deleteMessage);
+                        myTelegramBot.deleteMessage(deleteMessage);
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text(senMessage)
-                            .replyMarkup(replyButtonService.buildCancelButton())
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(senMessage)
+                                .replyMarkup(replyButtonService.buildCancelButton())
+                                .build();
 
-                } else if (data.equals("booking-cancel")) {
+                    }
+                    case "booking-cancel" -> {
 
-                    String senMessage = "✍️ Bekor qilish uchun buyurtma ID raqamini kiriting:\n" +
-                            "(Masalan: 123)";
+                        String senMessage = "✍️ Bekor qilish uchun buyurtma ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
 
-                    user.setStep(StepEnum.BOOKING_CANCEL);
+                        user.setStep(StepEnum.BOOKING_CANCEL);
 
-                    telegramUserRepository.save(user);
+                        telegramUserRepository.save(user);
 
-                    DeleteMessage deleteMessage = DeleteMessage.builder()
-                            .chatId(chatId)
-                            .messageId(messageId)
-                            .build();
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
 
-                    myTelegramBot.deleteMessage(deleteMessage);
+                        myTelegramBot.deleteMessage(deleteMessage);
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text(senMessage)
-                            .replyMarkup(replyButtonService.buildCancelButton())
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(senMessage)
+                                .replyMarkup(replyButtonService.buildCancelButton())
+                                .build();
 
+                    }
                 }
 
             } else if (data.startsWith("payment-")) {
 
+                String senMessage;
+
                 if (data.equals("payment-confirm")) {
 
-                    String senMessage = "✍️ To'lovni tasdiqlash uchun buyurtma ID raqamini kiriting:\n" +
+                    senMessage = "✍️ To'lovni tasdiqlash uchun buyurtma ID raqamini kiriting:\n" +
                             "(Masalan: 123)";
 
                     user.setStep(StepEnum.PAYMENT_CONFIRM);
@@ -135,15 +141,9 @@ public class AdminCallbackServiceImpl implements AdminCallbackService {
 
                     myTelegramBot.deleteMessage(deleteMessage);
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text(senMessage)
-                            .replyMarkup(replyButtonService.buildCancelButton())
-                            .build();
-
                 } else {
 
-                    String senMessage = "✍️ To'lovni bekor qilish uchun buyurtma ID raqamini kiriting:\n" +
+                    senMessage = "✍️ To'lovni bekor qilish uchun buyurtma ID raqamini kiriting:\n" +
                             "(Masalan: 123)";
 
                     user.setStep(StepEnum.PAYMENT_CANCEL);
@@ -157,6 +157,95 @@ public class AdminCallbackServiceImpl implements AdminCallbackService {
 
                     myTelegramBot.deleteMessage(deleteMessage);
 
+                }
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text(senMessage)
+                        .replyMarkup(replyButtonService.buildCancelButton())
+                        .build();
+
+            } else if (data.startsWith("penalty-")) {
+
+                if (data.startsWith("penalty-booking")) {
+
+                    String senMessage;
+
+                    if (data.equals("penalty-booking-confirm")) {
+
+                        senMessage = "✍️ Jarimani tasdiqlash uchun buyurtma ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
+
+                        user.setStep(StepEnum.PENALTY_BOOKING_CONFIRM);
+
+                        telegramUserRepository.save(user);
+
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.deleteMessage(deleteMessage);
+
+                    } else {
+
+                        senMessage = "✍️ Jarimani bekor qilish uchun buyurtma ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
+
+                        user.setStep(StepEnum.PENALTY_BOOKING_CANCEL);
+
+                        telegramUserRepository.save(user);
+
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.deleteMessage(deleteMessage);
+
+                    }
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(senMessage)
+                            .replyMarkup(replyButtonService.buildCancelButton())
+                            .build();
+
+                } else {
+
+                    String senMessage;
+
+                    if (data.equals("penalty-confirm")) {
+
+                        senMessage = "✍️ Jarimani tasdiqlash uchun penalty ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
+
+                        user.setStep(StepEnum.PENALTY_CONFIRM);
+
+                        telegramUserRepository.save(user);
+
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.deleteMessage(deleteMessage);
+
+                    } else {
+
+                        senMessage = "✍️ Jarimani bekor qilish uchun penalty ID raqamini kiriting:\n" +
+                                "(Masalan: 123)";
+
+                        user.setStep(StepEnum.PENALTY_CANCEL);
+
+                        telegramUserRepository.save(user);
+
+                        DeleteMessage deleteMessage = DeleteMessage.builder()
+                                .chatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.deleteMessage(deleteMessage);
+
+                    }
                     return SendMessage.builder()
                             .chatId(chatId)
                             .text(senMessage)
