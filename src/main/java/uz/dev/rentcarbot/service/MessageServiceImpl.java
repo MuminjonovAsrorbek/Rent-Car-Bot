@@ -10,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import uz.dev.rentcarbot.client.AuthClient;
 import uz.dev.rentcarbot.client.UserClient;
+import uz.dev.rentcarbot.payload.UserDTO;
 import uz.dev.rentcarbot.utils.ChatContextHolder;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.StepEnum;
@@ -70,6 +71,8 @@ public class MessageServiceImpl implements MessageService {
 
                 TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(phoneNumber);
 
+                UserDTO userInfo = userClient.getUserInfo();
+
                 tokenService.saveTokens(chatId, tokenDTO);
 
                 ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
@@ -77,6 +80,8 @@ public class MessageServiceImpl implements MessageService {
                 user.setStep(StepEnum.SELECT_MENU);
 
                 user.setUserId(registered.getId());
+
+                user.setRole(userInfo.getRole());
 
                 userRepository.save(user);
 

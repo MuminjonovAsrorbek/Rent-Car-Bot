@@ -95,6 +95,9 @@ public class TextServiceImpl implements TextService {
 
                     ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
 
+                    UserDTO userInfo = userClient.getUserInfo();
+
+                    user.setRole(userInfo.getRole());
                     user.setStep(StepEnum.SELECT_MENU);
 
                     userRepository.save(user);
