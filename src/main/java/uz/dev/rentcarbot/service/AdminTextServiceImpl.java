@@ -270,7 +270,7 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                 if (pattern.matcher(text).matches()) {
 
-                    PenaltyDTO penaltyDTO = null;
+                    PenaltyDTO penaltyDTO;
 
                     long bookingId = Long.parseLong(text);
 
@@ -320,11 +320,11 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                 if (pattern.matcher(text).matches()) {
 
-                    PenaltyDTO penaltyDTO = null;
+                    PenaltyDTO penaltyDTO;
 
                     long penaltyId = Long.parseLong(text);
 
-                    if(user.getStep().equals(StepEnum.PENALTY_CONFIRM)){
+                    if (user.getStep().equals(StepEnum.PENALTY_CONFIRM)) {
 
                         penaltyDTO = penaltyClient.confirmPenaltyWithPenaltyId(penaltyId);
 
@@ -334,7 +334,7 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                     }
 
-                    if(Objects.nonNull(penaltyDTO)){
+                    if (Objects.nonNull(penaltyDTO)) {
 
                         user.setStep(StepEnum.SELECT_MENU_ADMIN);
 
