@@ -342,11 +342,11 @@ public class UserTextServiceImpl implements UserTextService {
     @Override
     public StringBuilder getUserBookings(PageableDTO<BookingDTO> myBookings, Long chatId) {
 
-        StringBuilder sb = new StringBuilder();
-
         List<BookingDTO> bookingDTOS = myBookings.getObjects();
 
         BookingDTO booking = bookingDTOS.get(0);
+
+        StringBuilder sb = new StringBuilder();
 
         sb.append("<b>📄 Booking Ma'lumotlari</b>\n\n");
 
