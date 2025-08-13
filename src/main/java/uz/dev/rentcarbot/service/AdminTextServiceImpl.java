@@ -172,7 +172,7 @@ public class AdminTextServiceImpl implements AdminTextService {
 
             }
 
-            Pattern pattern = Pattern.compile("^\\d+$\n");
+            Pattern pattern = Pattern.compile("^\\d+$");
 
             if (pattern.matcher(text).matches()) {
 
