@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import uz.dev.rentcarbot.client.*;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
@@ -43,8 +44,9 @@ public class UserTextServiceImpl implements UserTextService {
     private final PromoCodeClient promoCodeClient;
     private final BookingClient bookingClient;
     private final NotificationClient notificationClient;
+    private final FavoriteClient favoriteClient;
 
-    public UserTextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient, BookingClient bookingClient, NotificationClient notificationClient) {
+    public UserTextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient, BookingClient bookingClient, NotificationClient notificationClient, FavoriteClient favoriteClient) {
         this.userRepository = userRepository;
         this.replyButtonService = replyButtonService;
         this.inlineButtonService = inlineButtonService;
@@ -54,6 +56,7 @@ public class UserTextServiceImpl implements UserTextService {
         this.promoCodeClient = promoCodeClient;
         this.bookingClient = bookingClient;
         this.notificationClient = notificationClient;
+        this.favoriteClient = favoriteClient;
     }
 
 
@@ -132,6 +135,34 @@ public class UserTextServiceImpl implements UserTextService {
                             .parseMode(ParseMode.HTML)
                             .build();
 
+                }
+                case "❤️ Sevimlilar" -> {
+
+                    PageableDTO<FavoriteDTO> pageableDTO = favoriteClient.getMyFavorites(0, 10);
+
+                    pageableDTO.setCurrentPage(0);
+
+                    List<FavoriteDTO> favoriteDTOS = pageableDTO.getObjects();
+
+                    if (favoriteDTOS.isEmpty()) {
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("Sevimlilar mavjud emas")
+                                .build();
+
+                    }
+
+                    String sendMessage = getFavorites(favoriteDTOS);
+
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildFavorites(pageableDTO);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sendMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineKeyboardMarkup)
+                            .build();
                 }
             }
 
@@ -278,6 +309,34 @@ public class UserTextServiceImpl implements UserTextService {
             }
         }
         return sb.toString();
+    }
+
+    @Override
+    public String getFavorites(List<FavoriteDTO> favoriteDTOS) {
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < favoriteDTOS.size(); i++) {
+
+            CarDTO car = carClient.getCarById(favoriteDTOS.get(i).getCarId());
+
+            sb.append(i + 1).append(". ")
+                    .append("🚗 <b>")
+                    .append(car.getBrand()).append(" ").append(car.getModel())
+                    .append("</b> (").append(car.getYear()).append(")").append("\n")
+                    .append("💰 <b>").append(String.format("%,d", car.getPricePerDay()))
+                    .append("</b> so'm/kun").append("\n")
+                    .append("⛽ ").append(car.getFuelType().name())
+                    .append(", ").append(car.getFuelConsumption().stripTrailingZeros().toPlainString())
+                    .append(" L/100km").append("\n")
+                    .append("⚙ ").append(car.getTransmission().name())
+                    .append(" | ").append(car.getSeats()).append(" o‘rinli")
+                    .append("\n\n");
+
+        }
+
+        return sb.toString().trim();
+
     }
 
     @Override

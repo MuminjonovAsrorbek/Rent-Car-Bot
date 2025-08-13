@@ -3,10 +3,7 @@ package uz.dev.rentcarbot.service.template;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import uz.dev.rentcarbot.payload.BookingCreateDTO;
-import uz.dev.rentcarbot.payload.BookingDTO;
-import uz.dev.rentcarbot.payload.NotificationDTO;
-import uz.dev.rentcarbot.payload.PageableDTO;
+import uz.dev.rentcarbot.payload.*;
 
 import java.util.List;
 
@@ -19,6 +16,8 @@ public interface UserTextService {
     BotApiMethod<?> process(Message message);
 
     String getNotification(PageableDTO<NotificationDTO> allNotifications, PageableDTO<NotificationDTO> myUnreadNotifications, List<NotificationDTO> notifications);
+
+    String getFavorites(List<FavoriteDTO> favoriteDTOS);
 
     StringBuilder getUserBookings(PageableDTO<BookingDTO> myBookings, Long chatId);
 
