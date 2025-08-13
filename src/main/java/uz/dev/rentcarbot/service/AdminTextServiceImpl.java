@@ -293,7 +293,7 @@ public class AdminTextServiceImpl implements AdminTextService {
                         return SendMessage.builder()
                                 .chatId(chatId)
                                 .text(buildPenaltyMessage(penaltyDTO))
-                                .parseMode(ParseMode.MARKDOWN)
+                                .parseMode(ParseMode.HTML)
                                 .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                                 .build();
 
@@ -343,7 +343,7 @@ public class AdminTextServiceImpl implements AdminTextService {
                         return SendMessage.builder()
                                 .chatId(chatId)
                                 .text(buildPenaltyMessage(penaltyDTO))
-                                .parseMode(ParseMode.MARKDOWN)
+                                .parseMode(ParseMode.HTML)
                                 .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                                 .build();
 

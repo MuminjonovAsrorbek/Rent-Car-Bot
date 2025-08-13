@@ -464,7 +464,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         fourthBtn.setText("❌ Bekor qilish (Penalty ID)");
         fourthBtn.setCallbackData("penalty-cancel");
 
-        keyboard.add(List.of(firstBtn, fourthBtn));
+        keyboard.add(List.of(thirdBtn, fourthBtn));
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
 
