@@ -71,8 +71,6 @@ public class MessageServiceImpl implements MessageService {
 
                 TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(phoneNumber);
 
-                UserDTO userInfo = userClient.getUserInfo();
-
                 tokenService.saveTokens(chatId, tokenDTO);
 
                 ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
@@ -80,6 +78,8 @@ public class MessageServiceImpl implements MessageService {
                 user.setStep(StepEnum.SELECT_MENU);
 
                 user.setUserId(registered.getId());
+
+                UserDTO userInfo = userClient.getUserInfo();
 
                 user.setRole(userInfo.getRole());
 

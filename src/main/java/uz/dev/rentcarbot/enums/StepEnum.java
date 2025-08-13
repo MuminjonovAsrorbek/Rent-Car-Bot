@@ -23,6 +23,11 @@ public enum StepEnum {
     CHECKED_BOOKING,
 
     // only for admins
-    SELECT_MENU_ADMIN
+    SELECT_MENU_ADMIN,
+    BOOKING_CONFIRM,
+    BOOKING_COMPLETE,
+    BOOKING_CANCEL,
+    PAYMENT_CONFIRM,
+    PAYMENT_CANCEL
 
 }

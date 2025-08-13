@@ -391,4 +391,48 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
     }
 
+    @Override
+    public InlineKeyboardMarkup buildBookingMenu() {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("✅ Tasdiqlash");
+        firstBtn.setCallbackData("booking-confirm");
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("\uD83D\uDCE5 Qabul qilish");
+        secondBtn.setCallbackData("booking-complete");
+
+        keyboard.add(List.of(firstBtn, secondBtn));
+
+        InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
+
+        thirdBtn.setText("❌ Bekor qilish");
+        thirdBtn.setCallbackData("booking-cancel");
+
+        keyboard.add(List.of(thirdBtn));
+
+        InlineKeyboardButton fourthBtn = new InlineKeyboardButton();
+
+        fourthBtn.setText("\uD83D\uDCB3 To‘lov tasdiq");
+        fourthBtn.setCallbackData("payment-confirm");
+
+        InlineKeyboardButton fiveBtn = new InlineKeyboardButton();
+
+        fiveBtn.setText("\uD83D\uDEAB To‘lov bekor");
+        fiveBtn.setCallbackData("payment-cancel");
+
+        keyboard.add(List.of(fourthBtn, fiveBtn));
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
 }
