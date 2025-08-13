@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import uz.dev.rentcarbot.enums.PageEnum;
 import uz.dev.rentcarbot.enums.PaymetMethodEnum;
 import uz.dev.rentcarbot.payload.CarDTO;
+import uz.dev.rentcarbot.payload.FavoriteDTO;
 import uz.dev.rentcarbot.payload.OfficeDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
@@ -274,6 +275,40 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         inlineKeyboardMarkup.setKeyboard(keyboard);
 
         return inlineKeyboardMarkup;
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildFavorites(PageableDTO pageableDTO) {
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        List<FavoriteDTO> favoriteDTOS = (List<FavoriteDTO>) pageableDTO.getObjects();
+
+        for (int i = 0; i < favoriteDTOS.size(); i += 5) {
+
+            List<InlineKeyboardButton> row = new ArrayList<>();
+
+            for (int j = i; j < i + 5 && j < favoriteDTOS.size(); j++) {
+
+                row.add(InlineKeyboardButton.builder()
+                        .text(String.valueOf((j + 1)))
+                        .callbackData("favorite:" + favoriteDTOS.get(j).getCarId())
+                        .build());
+            }
+            keyboard.add(row);
+
+        }
+
+        List<InlineKeyboardButton> nextAndPrevBtns = getNextAndPrevBtns(0L, pageableDTO, PageEnum.FAVORITE);
+
+        keyboard.add(nextAndPrevBtns);
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
     }
 
     @Override

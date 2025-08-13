@@ -180,6 +180,24 @@ public class UserCallbackServiceImpl implements UserCallbackService {
 
                 return getNotificationPage(page, chatId, messageId);
 
+            } else if (pageEnumElement.equals(PageEnum.FAVORITE.toString())) {
+
+                PageableDTO<FavoriteDTO> pageableDTO = favoriteClient.getMyFavorites(page, 10);
+
+                List<FavoriteDTO> favoriteDTOS = pageableDTO.getObjects();
+
+                String sendMessage = userTextService.getFavorites(favoriteDTOS);
+
+                InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildFavorites(pageableDTO);
+
+                return EditMessageText.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .text(sendMessage)
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(inlineKeyboardMarkup)
+                        .build();
+
             }
 
         } else if (data.startsWith("car-favorite")) {
@@ -458,6 +476,10 @@ public class UserCallbackServiceImpl implements UserCallbackService {
                     }
 
                 }
+
+            } else if (data.startsWith("favorite:")) {
+
+                return getCarInfo(messageId, chatId, data);
 
             }
 

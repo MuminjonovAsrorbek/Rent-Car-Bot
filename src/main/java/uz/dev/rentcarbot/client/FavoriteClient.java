@@ -4,6 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.dev.rentcarbot.payload.FavoriteDTO;
+import uz.dev.rentcarbot.payload.PageableDTO;
 import uz.dev.rentcarbot.payload.TgFavoriteDTO;
 
 /**
@@ -22,5 +23,8 @@ public interface FavoriteClient {
 
     @DeleteMapping("/{id}")
     ResponseEntity<String> deleteFavorite(@PathVariable Long id);
+
+    @GetMapping("/my")
+    PageableDTO<FavoriteDTO> getMyFavorites(@RequestParam int page, @RequestParam int size);
 
 }
