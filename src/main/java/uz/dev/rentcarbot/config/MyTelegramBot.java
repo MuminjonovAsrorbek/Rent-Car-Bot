@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.ForwardMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
@@ -42,6 +43,9 @@ public class MyTelegramBot extends TelegramWebhookBot {
     @Getter
     private final Map<Long, BookingCreateDTO> userBookings = new HashMap<>();
 
+    @Getter
+    private final Map<Long, Long> userChatIds = new HashMap<>();
+
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
 
@@ -56,6 +60,18 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
+        }
+
+    }
+
+    public void forwardMessage(ForwardMessage forwardMessage) {
+
+        try {
+            execute(forwardMessage);
+        } catch (TelegramApiException e) {
+
+            e.printStackTrace();
+
         }
 
     }
