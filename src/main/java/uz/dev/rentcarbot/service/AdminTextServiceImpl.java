@@ -429,6 +429,10 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                 }
 
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
                 return SendMessage.builder()
                         .chatId(chatId)
                         .text("Habaringiz yuborildi")
@@ -493,6 +497,10 @@ public class AdminTextServiceImpl implements AdminTextService {
             myTelegramBot.forwardMessage(forwardMessage);
 
             myTelegramBot.getUserChatIds().remove(chatId);
+
+            user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+            userRepository.save(user);
 
             return SendMessage.builder()
                     .chatId(chatId)
