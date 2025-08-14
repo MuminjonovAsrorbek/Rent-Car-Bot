@@ -43,6 +43,4 @@ public class TelegramUser {
 
     private Long userId;
 
-    @Column(name = "temp_data")
-    private String tempData;
 }

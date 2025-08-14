@@ -1,425 +1,610 @@
 package uz.dev.rentcarbot.service;
 
-import lombok.RequiredArgsConstructor;
+import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.ForwardMessage;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import uz.dev.rentcarbot.client.CategoryClient;
-import uz.dev.rentcarbot.client.OfficeClient;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import uz.dev.rentcarbot.client.BookingClient;
+import uz.dev.rentcarbot.client.PaymentClient;
+import uz.dev.rentcarbot.client.PenaltyClient;
 import uz.dev.rentcarbot.client.StatisticsClient;
+import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
+import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
-import uz.dev.rentcarbot.payload.CategoryDTO;
-import uz.dev.rentcarbot.payload.OfficeDTO;
-import uz.dev.rentcarbot.payload.PageableDTO;
+import uz.dev.rentcarbot.payload.BookingDTO;
+import uz.dev.rentcarbot.payload.PaymentDTO;
+import uz.dev.rentcarbot.payload.PenaltyDTO;
 import uz.dev.rentcarbot.payload.UserStatisticDTO;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
 import uz.dev.rentcarbot.service.template.AdminTextService;
-import java.math.BigDecimal;
-import java.util.ArrayList;
+import uz.dev.rentcarbot.service.template.InlineButtonService;
+import uz.dev.rentcarbot.service.template.ReplyButtonService;
+
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Pattern;
+
+/**
+ * Created by: asrorbek
+ * DateTime: 8/13/25 20:17
+ **/
 
 @Service
-@RequiredArgsConstructor
 public class AdminTextServiceImpl implements AdminTextService {
 
     private final TelegramUserRepository userRepository;
     private final StatisticsClient statisticsClient;
-    private final CategoryClient categoryClient;
-    private final OfficeClient officeClient;
+    private final InlineButtonService inlineButtonService;
+    private final BookingClient bookingClient;
+    private final ReplyButtonService replyButtonService;
+    private final PaymentClient paymentClient;
+    private final PenaltyClient penaltyClient;
+    private final MyTelegramBot myTelegramBot;
+
+    public AdminTextServiceImpl(TelegramUserRepository userRepository, StatisticsClient statisticsClient, InlineButtonService inlineButtonService, BookingClient bookingClient, ReplyButtonService replyButtonService, PaymentClient paymentClient, PenaltyClient penaltyClient, @Lazy MyTelegramBot myTelegramBot) {
+        this.userRepository = userRepository;
+        this.statisticsClient = statisticsClient;
+        this.inlineButtonService = inlineButtonService;
+        this.bookingClient = bookingClient;
+        this.replyButtonService = replyButtonService;
+        this.paymentClient = paymentClient;
+        this.penaltyClient = penaltyClient;
+        this.myTelegramBot = myTelegramBot;
+    }
 
     @Override
+    @Transactional
     public BotApiMethod<?> process(Message message) {
 
         String text = message.getText();
+
         Long chatId = message.getChatId();
+
         TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
 
+        Integer messageId = message.getMessageId();
+
         if (user.getStep().equals(StepEnum.SELECT_MENU_ADMIN)) {
-            return handleMainMenu(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.CATEGORY_MENU)) {
-            return handleCategoryMenu(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.CATEGORY_ADD_NAME)) {
-            return handleCategoryAddName(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.OFFICE_MENU)) {
-            return handleOfficeMenu(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.OFFICE_ADD_NAME)) {
-            return handleOfficeAddName(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.OFFICE_ADD_ADDRESS)) {
-            return handleOfficeAddAddress(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.OFFICE_ADD_LATITUDE)) {
-            return handleOfficeAddLatitude(text, chatId, user);
-        } else if (user.getStep().equals(StepEnum.OFFICE_ADD_LONGITUDE)) {
-            return handleOfficeAddLongitude(text, chatId, user);
-        }
 
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("❌ Noto'g'ri buyruq! Iltimos, mavjud komandalarni ishlating.")
-                .build();
-    }
+            switch (text) {
+                case "\uD83D\uDC64 Foydalanuvchilar" -> {
 
-    private BotApiMethod<?> handleMainMenu(String text, Long chatId, TelegramUser user) {
-        switch (text) {
-            case "\uD83D\uDC64 Foydalanuvchilar" -> {
-                String sb = getStatistics();
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text(sb)
-                        .parseMode(ParseMode.HTML)
-                        .build();
-            }
-            case "📂 Kategoriyalar" -> {
-                user.setStep(StepEnum.CATEGORY_MENU);
-                userRepository.save(user);
-                return showCategoryMenu(chatId);
-            }
-            case "🏢 Ofislar" -> {
-                user.setStep(StepEnum.OFFICE_MENU);
-                userRepository.save(user);
-                return showOfficeMenu(chatId);
-            }
-        }
-        return getErrorMessage(chatId);
-    }
+                    String sb = getStatistics();
 
-    private BotApiMethod<?> handleCategoryMenu(String text, Long chatId, TelegramUser user) {
-        switch (text) {
-            case "➕ Kategoriya qo'shish" -> {
-                user.setStep(StepEnum.CATEGORY_ADD_NAME);
-                userRepository.save(user);
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text("📝 Yangi kategoriya nomini kiriting:")
-                        .replyMarkup(buildBackButton())
-                        .build();
-            }
-            case "📋 Kategoriyalar ro'yxati" -> {
-                return showCategoriesList(chatId);
-            }
-            case "🔙 Orqaga" -> {
-                user.setStep(StepEnum.SELECT_MENU_ADMIN);
-                userRepository.save(user);
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text("🔙 Asosiy menyuga qaytdingiz")
-                        .build();
-            }
-        }
-        return getErrorMessage(chatId);
-    }
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sb)
+                            .parseMode(ParseMode.HTML)
+                            .build();
+                }
+                case "\uD83D\uDCE6 Buyurtmalar" -> {
 
-    private BotApiMethod<?> handleCategoryAddName(String text, Long chatId, TelegramUser user) {
-        if (text.equals("🔙 Orqaga")) {
-            user.setStep(StepEnum.CATEGORY_MENU);
-            userRepository.save(user);
-            return showCategoryMenu(chatId);
-        }
+                    String sendMessage = """
+                            <b>📦 Buyurtmalar</b>
+                            
+                            Bu bo‘limda siz quyidagilarni amalga oshirishingiz mumkin:
+                            ✅ Buyurtmani <b>tasdiqlash</b>
+                            📥 Buyurtmani <b>qabul qilish</b>
+                            ❌ Buyurtmani <b>bekor qilish</b>
+                            💳 To‘lovni <b>tasdiqlash</b>
+                            🚫 To‘lovni <b>bekor qilish</b>
+                            """;
 
-        try {
-            CategoryDTO categoryDTO = new CategoryDTO();
-            categoryDTO.setName(text);
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildBookingMenu();
 
-            CategoryDTO createdCategory = categoryClient.createCategory(categoryDTO);
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sendMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineKeyboardMarkup)
+                            .build();
 
-            user.setStep(StepEnum.CATEGORY_MENU);
-            userRepository.save(user);
+                }
+                case "⚠ Jarimalar" -> {
 
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("✅ Kategoriya muvaffaqiyatli qo'shildi!\n\n" +
-                            "📂 Kategoriya: " + createdCategory.getName())
-                    .parseMode(ParseMode.HTML)
-                    .replyMarkup(buildCategoryMenuButtons())
-                    .build();
-        } catch (Exception e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Kategoriya qo'shishda xatolik yuz berdi. Qaytadan urinib ko'ring.")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
-    }
+                    String sendMessage = """
+                             <b>⚠ Jarimalar bo‘limi</b>
+                            \s
+                             Bu bo‘limda siz quyidagi amallarni bajarishingiz mumkin:
+                            \s
+                             1️⃣ <b>Jarimani tasdiqlash</b> \s
+                             2️⃣ <b>Jarimani bekor qilish</b> \s
+                            \s
+                             Amallarni ikki xil usulda bajarish mumkin: \s
+                             - <b>Booking ID</b> orqali \s
+                             - <b>Penalty ID</b> orqali \s
+                            \s
+                             <i>Kerakli amalni tanlash uchun quyidagi tugmalardan foydalaning.</i>
+                            \s""";
 
-    private BotApiMethod<?> handleOfficeMenu(String text, Long chatId, TelegramUser user) {
-        switch (text) {
-            case "➕ Ofis qo'shish" -> {
-                user.setStep(StepEnum.OFFICE_ADD_NAME);
-                userRepository.save(user);
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text("🏢 Yangi ofis nomini kiriting:")
-                        .replyMarkup(buildBackButton())
-                        .build();
-            }
-            case "📋 Ofislar ro'yxati" -> {
-                return showOfficesList(chatId);
-            }
-            case "🔙 Orqaga" -> {
-                user.setStep(StepEnum.SELECT_MENU_ADMIN);
-                userRepository.save(user);
-                return SendMessage.builder()
-                        .chatId(chatId)
-                        .text("🔙 Asosiy menyuga qaytdingiz")
-                        .build();
-            }
-        }
-        return getErrorMessage(chatId);
-    }
 
-    private BotApiMethod<?> handleOfficeAddName(String text, Long chatId, TelegramUser user) {
-        if (text.equals("🔙 Orqaga")) {
-            user.setStep(StepEnum.OFFICE_MENU);
-            userRepository.save(user);
-            return showOfficeMenu(chatId);
-        }
+                    InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildPenaltyMenuForAdmin();
 
-        user.setTempData(text);
-        user.setStep(StepEnum.OFFICE_ADD_ADDRESS);
-        userRepository.save(user);
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sendMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineKeyboardMarkup)
+                            .build();
+                }
+                case "\uD83D\uDCE2 E’lonlar" -> {
 
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("📍 Ofis manzilini kiriting:")
-                .replyMarkup(buildBackButton())
-                .build();
-    }
+                    String sedMessage = """
+                            <b>📢 E'lonlar bo'limi</b>
+                            
+                            Bu yerda siz <b>hammaga</b> yoki <b>bitta foydalanuvchiga</b> e'lon yuborishingiz mumkin.
+                            
+                            <i>Tanlang:</i>
+                            """;
 
-    private BotApiMethod<?> handleOfficeAddAddress(String text, Long chatId, TelegramUser user) {
-        if (text.equals("🔙 Orqaga")) {
-            user.setStep(StepEnum.OFFICE_ADD_NAME);
-            userRepository.save(user);
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("🏢 Yangi ofis nomini kiriting:")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sedMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineButtonService.buildNotificationMSG())
+                            .build();
 
-        user.setTempData(user.getTempData() + "|" + text);
-        user.setStep(StepEnum.OFFICE_ADD_LATITUDE);
-        userRepository.save(user);
-
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("🌐 Latitude (kenglik) ni kiriting:\nMasalan: 41.2995")
-                .replyMarkup(buildBackButton())
-                .build();
-    }
-
-    private BotApiMethod<?> handleOfficeAddLatitude(String text, Long chatId, TelegramUser user) {
-        if (text.equals("🔙 Orqaga")) {
-            user.setStep(StepEnum.OFFICE_ADD_ADDRESS);
-            userRepository.save(user);
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("📍 Ofis manzilini kiriting:")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
-
-        try {
-            BigDecimal latitude = new BigDecimal(text);
-            user.setTempData(user.getTempData() + "|" + text);
-            user.setStep(StepEnum.OFFICE_ADD_LONGITUDE);
-            userRepository.save(user);
-
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("🌐 Longitude (uzunlik) ni kiriting:\nMasalan: 69.2401")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        } catch (NumberFormatException e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Noto'g'ri format! Raqam kiriting.\nMasalan: 41.2995")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
-    }
-
-    private BotApiMethod<?> handleOfficeAddLongitude(String text, Long chatId, TelegramUser user) {
-        if (text.equals("🔙 Orqaga")) {
-            user.setStep(StepEnum.OFFICE_ADD_LATITUDE);
-            userRepository.save(user);
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("🌐 Latitude (kenglik) ni kiriting:\nMasalan: 41.2995")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
-
-        try {
-            BigDecimal longitude = new BigDecimal(text);
-            String[] tempData = user.getTempData().split("\\|");
-
-            OfficeDTO officeDTO = new OfficeDTO();
-            officeDTO.setName(tempData[0]);
-            officeDTO.setAddress(tempData[1]);
-            officeDTO.setLatitude(new BigDecimal(tempData[2]));
-            officeDTO.setLongitude(longitude);
-
-            OfficeDTO createdOffice = officeClient.createOffice(officeDTO);
-
-            user.setStep(StepEnum.OFFICE_MENU);
-            user.setTempData(null);
-            userRepository.save(user);
-
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("✅ Ofis muvaffaqiyatli qo'shildi!\n\n" +
-                            "🏢 Nom: " + createdOffice.getName() + "\n" +
-                            "📍 Manzil: " + createdOffice.getAddress() + "\n" +
-                            "🌐 Koordinatalar: " + createdOffice.getLatitude() + ", " + createdOffice.getLongitude())
-                    .parseMode(ParseMode.HTML)
-                    .replyMarkup(buildOfficeMenuButtons())
-                    .build();
-        } catch (NumberFormatException e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Noto'g'ri format! Raqam kiriting.\nMasalan: 69.2401")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        } catch (Exception e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Ofis qo'shishda xatolik yuz berdi. Qaytadan urinib ko'ring.")
-                    .replyMarkup(buildBackButton())
-                    .build();
-        }
-    }
-
-    private SendMessage showCategoryMenu(Long chatId) {
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("📂 <b>Kategoriyalar boshqaruvi</b>\n\nQuyidagi amallardan birini tanlang:")
-                .parseMode(ParseMode.HTML)
-                .replyMarkup(buildCategoryMenuButtons())
-                .build();
-    }
-
-    private SendMessage showOfficeMenu(Long chatId) {
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("🏢 <b>Ofislar boshqaruvi</b>\n\nQuyidagi amallardan birini tanlang:")
-                .parseMode(ParseMode.HTML)
-                .replyMarkup(buildOfficeMenuButtons())
-                .build();
-    }
-
-    private SendMessage showCategoriesList(Long chatId) {
-        try {
-            PageableDTO<CategoryDTO> categories = categoryClient.getAllCategories(0, 10);
-            StringBuilder sb = new StringBuilder("📂 <b>Kategoriyalar ro'yxati:</b>\n\n");
-
-            if (categories.getObjects().isEmpty()) {
-                sb.append("❌ Hozircha kategoriyalar mavjud emas.");
-            } else {
-                for (CategoryDTO category : categories.getObjects()) {
-                    sb.append("🔹 ").append(category.getName()).append("\n");
                 }
             }
 
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text(sb.toString())
-                    .parseMode(ParseMode.HTML)
-                    .replyMarkup(buildCategoryMenuButtons())
-                    .build();
-        } catch (Exception e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Kategoriyalarni yuklashda xatolik yuz berdi.")
-                    .replyMarkup(buildCategoryMenuButtons())
-                    .build();
-        }
-    }
+        } else if (user.getStep().toString().startsWith("BOOKING_")) {
 
-    private SendMessage showOfficesList(Long chatId) {
-        try {
-            PageableDTO<OfficeDTO> offices = officeClient.getAllOfficesAdmin(0, 10);
-            StringBuilder sb = new StringBuilder("🏢 <b>Ofislar ro'yxati:</b>\n\n");
+            if (text.equals("Orqaga")) {
 
-            if (offices.getObjects().isEmpty()) {
-                sb.append("❌ Hozircha ofislar mavjud emas.");
-            } else {
-                for (OfficeDTO office : offices.getObjects()) {
-                    sb.append("🏢 <b>").append(office.getName()).append("</b>\n");
-                    sb.append("📍 ").append(office.getAddress()).append("\n\n");
-                }
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
             }
 
+            Pattern pattern = Pattern.compile("^\\d+$");
+
+            if (pattern.matcher(text).matches()) {
+
+                Long bookingId = Long.parseLong(text);
+
+                BookingDTO bookingDTO = null;
+
+                if (user.getStep().equals(StepEnum.BOOKING_CONFIRM)) {
+
+                    bookingDTO = bookingClient.confirmBooking(bookingId);
+
+
+                } else if (user.getStep().equals(StepEnum.BOOKING_COMPLETE)) {
+
+                    bookingDTO = bookingClient.completeBooking(bookingId);
+
+                } else if (user.getStep().equals(StepEnum.BOOKING_CANCEL)) {
+
+                    bookingDTO = bookingClient.cancelBooking(bookingId);
+
+                }
+
+                if (Objects.nonNull(bookingDTO)) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(buildBookingMessage(bookingDTO))
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+                }
+
+            } else {
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Iltimos faqat raqam kiriting !")
+                        .build();
+
+            }
+
+        } else if (user.getStep().toString().startsWith("PAYMENT_")) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            Pattern pattern = Pattern.compile("^\\d+$");
+
+            if (pattern.matcher(text).matches()) {
+
+                long bookingId = Long.parseLong(text);
+
+                PaymentDTO paymentDTO = null;
+
+                if (user.getStep().equals(StepEnum.PAYMENT_CONFIRM)) {
+
+                    paymentDTO = paymentClient.confirmPayment(bookingId);
+
+                } else if (user.getStep().equals(StepEnum.PAYMENT_CANCEL)) {
+
+                    paymentDTO = paymentClient.cancelPayment(bookingId);
+
+                }
+
+                if (Objects.nonNull(paymentDTO)) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(buildPaymentMessage(paymentDTO))
+                            .parseMode(ParseMode.MARKDOWN)
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+
+                }
+
+            } else {
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Iltimos faqat raqam kiriting !")
+                        .build();
+
+            }
+
+        } else if (user.getStep().toString().startsWith("PENALTY_")) {
+
+            if (user.getStep().toString().startsWith("PENALTY_BOOKING_")) {
+
+                if (text.equals("Orqaga")) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("MENU")
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+
+                }
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    PenaltyDTO penaltyDTO;
+
+                    long bookingId = Long.parseLong(text);
+
+                    if (user.getStep().equals(StepEnum.PENALTY_BOOKING_CONFIRM)) {
+
+                        penaltyDTO = penaltyClient.confirmPenalty(bookingId);
+
+                    } else {
+
+                        penaltyDTO = penaltyClient.cancelPenaltyWithBookingId(bookingId);
+
+                    }
+
+                    if (Objects.nonNull(penaltyDTO)) {
+
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                        userRepository.save(user);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(buildPenaltyMessage(penaltyDTO))
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                                .build();
+
+                    }
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
+                }
+
+            } else {
+
+                if (text.equals("Orqaga")) {
+
+                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("MENU")
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .build();
+
+                }
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    PenaltyDTO penaltyDTO;
+
+                    long penaltyId = Long.parseLong(text);
+
+                    if (user.getStep().equals(StepEnum.PENALTY_CONFIRM)) {
+
+                        penaltyDTO = penaltyClient.confirmPenaltyWithPenaltyId(penaltyId);
+
+                    } else {
+
+                        penaltyDTO = penaltyClient.cancelPenaltyWithPenaltyId(penaltyId);
+
+                    }
+
+                    if (Objects.nonNull(penaltyDTO)) {
+
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                        userRepository.save(user);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(buildPenaltyMessage(penaltyDTO))
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                                .build();
+
+                    }
+
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
+                }
+
+            }
+
+        } else if (user.getStep().toString().startsWith("SEND_MSG")) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            if (user.getStep().equals(StepEnum.SEND_MSG_ALL)) {
+
+                List<TelegramUser> users = userRepository.findAll();
+
+                for (TelegramUser telegramUser : users) {
+
+                    if (telegramUser.getChatId() != null) {
+
+                        ForwardMessage forwardMessage = ForwardMessage.builder()
+                                .chatId(telegramUser.getChatId())
+                                .fromChatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.forwardMessage(forwardMessage);
+
+                    }
+
+                }
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Habaringiz yuborildi")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            } else {
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    long userId = Long.parseLong(text);
+
+                    myTelegramBot.getUserChatIds().put(chatId, userId);
+
+                    user.setStep(StepEnum.ENTER_TEXT);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Habaringizni yuboring")
+                            .replyMarkup(replyButtonService.buildCancelButton())
+                            .build();
+
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
+                }
+
+            }
+
+        } else if (user.getStep().equals(StepEnum.ENTER_TEXT)) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                myTelegramBot.getUserChatIds().remove(chatId);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            ForwardMessage forwardMessage = ForwardMessage.builder()
+                    .chatId(myTelegramBot.getUserChatIds().get(chatId))
+                    .fromChatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            myTelegramBot.forwardMessage(forwardMessage);
+
+            myTelegramBot.getUserChatIds().remove(chatId);
+
+            user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+            userRepository.save(user);
+
             return SendMessage.builder()
                     .chatId(chatId)
-                    .text(sb.toString())
-                    .parseMode(ParseMode.HTML)
-                    .replyMarkup(buildOfficeMenuButtons())
+                    .text("Habaringiz yuborildi")
+                    .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                     .build();
-        } catch (Exception e) {
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Ofislarni yuklashda xatolik yuz berdi.")
-                    .replyMarkup(buildOfficeMenuButtons())
-                    .build();
+
         }
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("""
+                        ❌ Noto‘g‘ri buyruq!
+                        Iltimos, mavjud komandalarni ishlating.
+                        """)
+                .build();
+
     }
 
-    private ReplyKeyboardMarkup buildCategoryMenuButtons() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
+    public String buildPenaltyMessage(PenaltyDTO p) {
 
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        return "<b>⚠️ Jarima ID:</b> " + p.getId() + "\n" +
+                "<b>📅 Sana:</b> " + p.getPenaltyDate().toLocalDateTime()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) +
+                "\n" +
+                "<b>📅 Yangilangan:</b> " + p.getUpdatedAt().toLocalDateTime()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) +
+                "\n" +
+                "<b>🚗 Booking ID:</b> " + p.getBookingId() + "\n" +
+                "<b>💰 Miqdor:</b> " + p.getPenaltyAmount() + " so'm\n" +
+                "<b>⏳ Kechikkan kunlar:</b> " + p.getOverdueDays() + " kun\n" +
+                "<b>📌 Status:</b> " + p.getStatus() + "\n\n";
 
-        KeyboardRow firstRow = new KeyboardRow();
-        firstRow.add("➕ Kategoriya qo'shish");
-        firstRow.add("📋 Kategoriyalar ro'yxati");
-        keyboardRows.add(firstRow);
-
-        KeyboardRow secondRow = new KeyboardRow();
-        secondRow.add("🔙 Orqaga");
-        keyboardRows.add(secondRow);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        return replyKeyboardMarkup;
     }
 
-    private ReplyKeyboardMarkup buildOfficeMenuButtons() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
+    public String buildPaymentMessage(PaymentDTO dto) {
 
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-        KeyboardRow firstRow = new KeyboardRow();
-        firstRow.add("➕ Ofis qo'shish");
-        firstRow.add("📋 Ofislar ro'yxati");
-        keyboardRows.add(firstRow);
-
-        KeyboardRow secondRow = new KeyboardRow();
-        secondRow.add("🔙 Orqaga");
-        keyboardRows.add(secondRow);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        return replyKeyboardMarkup;
+        return "💳 *To'lov ma'lumotlari*\n" +
+                "━━━━━━━━━━━━━━━━\n" +
+                "🔔 *ID:* `" + dto.getId() + "`\n" +
+                "📅 *Buyurtma ID:* `" + dto.getBookingId() + "`\n" +
+                "💵 *Miqdor:* `" + dto.getAmount() + " so'm`\n" +
+                "💸 *To'lov turi:* " + dto.getPaymentMethod() + "\n" +
+                "✅ *Holati:* " + dto.getStatus();
     }
 
-    private ReplyKeyboardMarkup buildBackButton() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
+    public String buildBookingMessage(BookingDTO booking) {
 
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
-        row.add("🔙 Orqaga");
-        keyboardRows.add(row);
+        StringBuilder sb = new StringBuilder();
 
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        return replyKeyboardMarkup;
+        sb.append("<b>📄 Booking Ma'lumotlari</b>\n\n");
+
+        sb.append("<b>🆔 Buyurtma ID:</b> ").append(booking.getId()).append("\n");
+        sb.append("<b>👤 Mijoz:</b> ").append(booking.getUserFullName()).append("\n");
+        sb.append("<b>📅 Status:</b> ").append(booking.getStatus()).append("\n\n");
+
+
+        sb.append("<b>🚗 Mashina</b>\n");
+        sb.append("• Brand: ").append(booking.getCarBrand()).append("\n");
+        sb.append("• Model: ").append(booking.getCarModel()).append("\n");
+        sb.append("• Joylar soni: ").append(booking.getCarSeats()).append("\n");
+        sb.append("• Yoqilg'i turi: ").append(booking.getCarFuelType()).append("\n");
+        sb.append("• Sarfi: ").append(booking.getCarFuelConsumption()).append(" L/100km\n");
+        sb.append("• Transmissiya: ").append(booking.getCarTransmission()).append("\n\n");
+
+
+        sb.append("<b>📆 Olish vaqti:</b> ").append(booking.getPickupDate()).append("\n");
+        sb.append("<b>📆 Qaytarish vaqti:</b> ").append(booking.getReturnDate()).append("\n\n");
+
+
+        if (booking.getPickupOffice() != null) {
+            sb.append("<b>📍 Olish ofisi:</b> ").append(booking.getPickupOffice().getName())
+                    .append(" — ").append(booking.getPickupOffice().getAddress()).append("\n");
+        }
+        if (booking.getReturnOffice() != null) {
+            sb.append("<b>📍 Qaytarish ofisi:</b> ").append(booking.getReturnOffice().getName())
+                    .append(" — ").append(booking.getReturnOffice().getAddress()).append("\n");
+        }
+        sb.append("\n");
+
+
+        sb.append("<b>👥 Kim uchun:</b> ").append(booking.getIsForSelf() ? "O‘zi uchun" : "Boshqa shaxs uchun").append("\n");
+        if (!booking.getIsForSelf()) {
+            sb.append("<b>👤 Qabul qiluvchi:</b> ").append(booking.getRecipientFullName()).append("\n");
+            sb.append("<b>📞 Tel:</b> ").append(booking.getRecipientPhone()).append("\n");
+        }
+        sb.append("\n");
+
+
+        if (booking.getPayment() != null) {
+            sb.append("<b>💳 To'lov</b>\n");
+            sb.append("• Summasi: ").append(booking.getPayment().getAmount()).append(" so'm\n");
+            sb.append("• Usuli: ").append(booking.getPayment().getPaymentMethod()).append("\n");
+            sb.append("• Status: ").append(booking.getPayment().getStatus()).append("\n\n");
+        }
+
+
+        sb.append("<b>🎁 Promokod:</b> ").append(booking.getHasPromoCode() ? "Bor" : "Yo‘q").append("\n");
+
+
+        sb.append("<b>💰 Umumiy narx:</b> ").append(booking.getTotalPrice()).append(" so'm\n");
+
+        return sb.toString();
+
     }
 
     private String getStatistics() {
@@ -427,18 +612,11 @@ public class AdminTextServiceImpl implements AdminTextService {
 
         return "<b>📊 Foydalanuvchilar statistikasi</b>\n\n" +
                 "👥 <b>Umumiy foydalanuvchilar:</b> " + userStatistics.getTotalUsers() + "\n" +
-                "🗑 <b>O'chirilganlar:</b> " + userStatistics.getDeletedUsers() + "\n" +
+                "🗑 <b>O‘chirilganlar:</b> " + userStatistics.getDeletedUsers() + "\n" +
                 "👨‍💼 <b>Adminlar:</b> " + userStatistics.getAdmins() + "\n" +
                 "🙋‍♂️ <b>Oddiy foydalanuvchilar:</b> " + userStatistics.getUsers() + "\n\n" +
-                "🗓 <b>Oxirgi oyda qo'shilgan:</b> " + userStatistics.getLastMonthUsers() + "\n" +
-                "📅 <b>Oxirgi haftada qo'shilgan:</b> " + userStatistics.getLastWeekUsers() + "\n" +
-                "📌 <b>Bugun qo'shilgan:</b> " + userStatistics.getTodayUsers();
-    }
-
-    private SendMessage getErrorMessage(Long chatId) {
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text("❌ Noto'g'ri buyruq! Iltimos, mavjud komandalarni ishlating.")
-                .build();
+                "🗓 <b>Oxirgi oyda qo‘shilgan:</b> " + userStatistics.getLastMonthUsers() + "\n" +
+                "📅 <b>Oxirgi haftada qo‘shilgan:</b> " + userStatistics.getLastWeekUsers() + "\n" +
+                "📌 <b>Bugun qo‘shilgan:</b> " + userStatistics.getTodayUsers();
     }
 }

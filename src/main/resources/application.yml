@@ -2,11 +2,6 @@ spring:
   application:
     name: rent-car-bot
 
-logging:
-  level:
-    org.springframework: DEBUG
-    org.springframework.boot.autoconfigure: DEBUG
-
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${DB_HOSTNAME}:${DB_PORT}/${DB_NAME}
