@@ -17,7 +17,7 @@ public class FeignAuthInterceptor implements RequestInterceptor {
 
         String url = template.url();
 
-        if (url.startsWith("/open")) {
+        if (url.startsWith("/open/telegram")) {
             return;
         }
 

@@ -136,6 +136,7 @@ public class TextServiceImpl implements TextService {
                         TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
 
                         user.setStep(StepEnum.SELECT_MENU_ADMIN);
+                        user.setRole(RoleEnum.ADMIN);
 
                         userRepository.save(user);
 
@@ -161,6 +162,7 @@ public class TextServiceImpl implements TextService {
                     TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
 
                     user.setStep(StepEnum.SELECT_MENU);
+                    user.setRole(RoleEnum.USER);
 
                     userRepository.save(user);
 
