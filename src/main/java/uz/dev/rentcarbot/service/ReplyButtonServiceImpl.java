@@ -90,22 +90,16 @@ public class ReplyButtonServiceImpl implements ReplyButtonService {
             KeyboardRow firstKeyboardRow = new KeyboardRow();
 
             firstKeyboardRow.add("\uD83D\uDC64 Foydalanuvchilar");
-            firstKeyboardRow.add("\uD83D\uDE97 Avtomobillar");
+            firstKeyboardRow.add("⚠ Jarimalar");
 
             keyboardRows.add(firstKeyboardRow);
 
             KeyboardRow secondKeyboardRow = new KeyboardRow();
 
             secondKeyboardRow.add("\uD83D\uDCE6 Buyurtmalar");
-            secondKeyboardRow.add("⚠ Jarimalar");
+            secondKeyboardRow.add("\uD83D\uDCE2 E’lonlar");
 
             keyboardRows.add(secondKeyboardRow);
-
-            KeyboardRow thirdKeyboardRow = new KeyboardRow();
-
-            thirdKeyboardRow.add("\uD83D\uDCE2 E’lonlar");
-
-            keyboardRows.add(thirdKeyboardRow);
 
             replyKeyboardMarkup.setKeyboard(keyboardRows);
 
