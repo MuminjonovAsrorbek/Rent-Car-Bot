@@ -18,7 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReplyButtonServiceImplNew implements ReplyButtonService {
+public class ReplyButtonServiceImpl implements ReplyButtonService {
 
 
     @Override
