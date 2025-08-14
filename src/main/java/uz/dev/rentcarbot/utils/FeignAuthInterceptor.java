@@ -15,6 +15,12 @@ public class FeignAuthInterceptor implements RequestInterceptor {
     @Override
     public void apply(RequestTemplate template) {
 
+        String url = template.url();
+
+        if (url.startsWith("/open")) {
+            return;
+        }
+
         Long chatId = ChatContextHolder.getChatId();
 
         String accessToken = tokenService.getAccessToken(chatId);
