@@ -1,7 +1,9 @@
 package uz.dev.rentcarbot.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import uz.dev.rentcarbot.payload.OfficeDTO;
 import uz.dev.rentcarbot.payload.PageableDTO;
 
@@ -19,18 +21,4 @@ public interface OfficeClient {
     @GetMapping("/open/{id}")
     OfficeDTO getOfficeById(@PathVariable Long id);
 
-    @GetMapping("/admin")
-    PageableDTO<OfficeDTO> getAllOfficesAdmin(@RequestParam int page, @RequestParam int size);
-
-    @PostMapping("/admin")
-    OfficeDTO createOffice(@RequestBody OfficeDTO officeDTO);
-
-    @PutMapping("/admin/{id}")
-    OfficeDTO updateOffice(@PathVariable Long id, @RequestBody OfficeDTO officeDTO);
-
-    @GetMapping("/admin/{id}")
-    OfficeDTO getOfficeByIdAdmin(@PathVariable Long id);
-
-    @DeleteMapping("/admin/{id}")
-    void deleteOffice(@PathVariable Long id);
 }
