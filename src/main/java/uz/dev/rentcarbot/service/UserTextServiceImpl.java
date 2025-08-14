@@ -105,6 +105,15 @@ public class UserTextServiceImpl implements UserTextService {
 
                     PageableDTO<BookingDTO> myBookings = bookingClient.getMyBookings(0, 1);
 
+                    if (myBookings.getObjects().isEmpty()) {
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("Sizda buyurtmalar mavjud emas")
+                                .build();
+
+                    }
+
                     StringBuilder sendMessage = getUserBookings(myBookings, chatId);
 
                     myBookings.setCurrentPage(0);
@@ -342,11 +351,11 @@ public class UserTextServiceImpl implements UserTextService {
     @Override
     public StringBuilder getUserBookings(PageableDTO<BookingDTO> myBookings, Long chatId) {
 
-        StringBuilder sb = new StringBuilder();
-
         List<BookingDTO> bookingDTOS = myBookings.getObjects();
 
         BookingDTO booking = bookingDTOS.get(0);
+
+        StringBuilder sb = new StringBuilder();
 
         sb.append("<b>📄 Booking Ma'lumotlari</b>\n\n");
 

@@ -31,4 +31,10 @@ public interface InlineButtonService {
     InlineKeyboardMarkup buildPenaltyMenu();
 
     InlineKeyboardMarkup buildNotificationPages(PageableDTO pageableDTO, PageEnum pageEnum);
+
+    InlineKeyboardMarkup buildBookingMenu();
+
+    InlineKeyboardMarkup buildPenaltyMenuForAdmin();
+
+    InlineKeyboardMarkup buildNotificationMSG();
 }

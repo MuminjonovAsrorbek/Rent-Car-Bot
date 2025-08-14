@@ -98,7 +98,11 @@ public class TextServiceImpl implements TextService {
                     UserDTO userInfo = userClient.getUserInfo();
 
                     user.setRole(userInfo.getRole());
-                    user.setStep(StepEnum.SELECT_MENU);
+
+                    if (userInfo.getRole().equals(RoleEnum.ADMIN))
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+                    else
+                        user.setStep(StepEnum.SELECT_MENU);
 
                     userRepository.save(user);
 
