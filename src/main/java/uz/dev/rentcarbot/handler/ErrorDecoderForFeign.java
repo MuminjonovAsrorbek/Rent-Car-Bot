@@ -12,10 +12,6 @@ import uz.dev.rentcarbot.utils.ChatContextHolder;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Created by: Mehrojbek
- * DateTime: 10/07/25 19:53
- **/
 @Component
 public class ErrorDecoderForFeign implements ErrorDecoder {
     private final ObjectMapper objectMapper = new ObjectMapper()
