@@ -415,18 +415,23 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                 for (TelegramUser telegramUser : users) {
 
-                    ForwardMessage forwardMessage = ForwardMessage.builder()
-                            .chatId(telegramUser.getChatId())
-                            .fromChatId(chatId)
-                            .messageId(messageId)
-                            .build();
+                    if (telegramUser.getChatId() != null) {
 
-                    myTelegramBot.forwardMessage(forwardMessage);
+                        ForwardMessage forwardMessage = ForwardMessage.builder()
+                                .chatId(telegramUser.getChatId())
+                                .fromChatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.forwardMessage(forwardMessage);
+
+                    }
 
                 }
 
                 return SendMessage.builder()
-                        .chatId("Habaringiz yuborildi")
+                        .chatId(chatId)
+                        .text("Habaringiz yuborildi")
                         .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                         .build();
 
@@ -487,8 +492,11 @@ public class AdminTextServiceImpl implements AdminTextService {
 
             myTelegramBot.forwardMessage(forwardMessage);
 
+            myTelegramBot.getUserChatIds().remove(chatId);
+
             return SendMessage.builder()
-                    .chatId("Habaringiz yuborildi")
+                    .chatId(chatId)
+                    .text("Habaringiz yuborildi")
                     .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
                     .build();
 
