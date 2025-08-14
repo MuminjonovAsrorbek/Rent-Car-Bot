@@ -408,7 +408,7 @@ public class AdminTextServiceImpl implements AdminTextService {
                         .build();
 
             }
-
+            //wedffdsas bgre
             if (user.getStep().equals(StepEnum.SEND_MSG_ALL)) {
 
                 List<TelegramUser> users = userRepository.findAll();
