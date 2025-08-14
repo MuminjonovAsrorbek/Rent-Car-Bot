@@ -57,103 +57,119 @@ public class TextServiceImpl implements TextService {
 
         if (text.startsWith("/")) {
 
-            if (text.equals("/start")) {
+            switch (text) {
+                case "/start" -> {
 
-                Optional<TelegramUser> userOptional = userRepository.findByChatId(message.getChatId());
+                    Optional<TelegramUser> userOptional = userRepository.findByChatId(message.getChatId());
 
-                if (userOptional.isEmpty()) {
+                    if (userOptional.isEmpty()) {
 
-                    ReplyKeyboardMarkup buttonMarkup = replyButtonService.buildPhoneNumber();
+                        ReplyKeyboardMarkup buttonMarkup = replyButtonService.buildPhoneNumber();
 
-                    TelegramUser user = new TelegramUser();
+                        TelegramUser user = new TelegramUser();
 
-                    user.setChatId(chatId);
-                    user.setFirstName(message.getChat().getFirstName());
-                    user.setUsername(CommonUtils.getOrDef(message.getChat().getUserName(), null));
-                    user.setStep(StepEnum.SEND_PHONE_NUMBER);
-                    user.setRole(RoleEnum.USER);
+                        user.setChatId(chatId);
+                        user.setFirstName(message.getChat().getFirstName());
+                        user.setUsername(CommonUtils.getOrDef(message.getChat().getUserName(), null));
+                        user.setStep(StepEnum.SEND_PHONE_NUMBER);
+                        user.setRole(RoleEnum.USER);
 
-                    userRepository.save(user);
+                        userRepository.save(user);
 
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text("""
-                                    🎉 Xush kelibsiz, @RentCarBot ga!
-                                    Ro‘yxatdan o‘tish uchun telefon raqamingizni yuboring.
-                                    Bu sizning ijaralaringizni boshqarish va xizmatlarimizdan foydalanish uchun zarur!
-                                    """)
-                            .replyMarkup(buttonMarkup)
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("""
+                                        🎉 Xush kelibsiz, @RentCarBot ga!
+                                        Ro‘yxatdan o‘tish uchun telefon raqamingizni yuboring.
+                                        Bu sizning ijaralaringizni boshqarish va xizmatlarimizdan foydalanish uchun zarur!
+                                        """)
+                                .replyMarkup(buttonMarkup)
+                                .build();
 
-                } else {
+                    } else {
 
-                    TelegramUser user = userOptional.get();
+                        TelegramUser user = userOptional.get();
 
-                    TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(user.getPhoneNumber());
+                        TokenDTO tokenDTO = authClient.getTokenByPhoneNumber(user.getPhoneNumber());
 
-                    tokenService.saveTokens(chatId, tokenDTO);
+                        tokenService.saveTokens(chatId, tokenDTO);
 
-                    ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
+                        ReplyKeyboardMarkup replyKeyboardMarkup = replyButtonService.buildMenuButtons(user.getRole());
 
-                    UserDTO userInfo = userClient.getUserInfo();
+                        UserDTO userInfo = userClient.getUserInfo();
 
-                    user.setRole(userInfo.getRole());
+                        user.setRole(userInfo.getRole());
 
-                    if (userInfo.getRole().equals(RoleEnum.ADMIN))
-                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
-                    else
-                        user.setStep(StepEnum.SELECT_MENU);
+                        if (userInfo.getRole().equals(RoleEnum.ADMIN))
+                            user.setStep(StepEnum.SELECT_MENU_ADMIN);
+                        else
+                            user.setStep(StepEnum.SELECT_MENU);
 
-                    userRepository.save(user);
+                        userRepository.save(user);
 
-                    return SendMessage.builder()
-                            .chatId(user.getChatId())
-                            .text("Menu")
-                            .replyMarkup(replyKeyboardMarkup)
-                            .build();
+                        return SendMessage.builder()
+                                .chatId(user.getChatId())
+                                .text("Menu")
+                                .replyMarkup(replyKeyboardMarkup)
+                                .build();
 
+                    }
                 }
-            } else if (text.equals("/admin")) {
+                case "/admin" -> {
 
-                UserDTO userDTO = userClient.getUserInfo();
+                    UserDTO userDTO = userClient.getUserInfo();
 
-                if (userDTO.getRole().equals(RoleEnum.ADMIN)) {
+                    if (userDTO.getRole().equals(RoleEnum.ADMIN)) {
 
-                    String sb = """
-                            <b>🔐 Admin Panel</b>
-                            
-                            Quyidagi bo‘limlardan birini tanlang:
-                            
-                            1️⃣ <b>👤 Foydalanuvchilar</b> — foydalanuvchilar ro‘yxati va ma’lumotlari
-                            2️⃣ <b>🚗 Avtomobillar</b> — avtomobil qo‘shish, tahrirlash, o‘chirish
-                            3️⃣ <b>📦 Buyurtmalar</b> — buyurtmalarni ko‘rish va boshqarish
-                            4️⃣ <b>⚠ Jarimalar</b> — jarimalar ro‘yxati va tahlil
-                            5️⃣ <b>📢 E’lonlar</b> — foydalanuvchilarga xabar yuborish
-                            """;
+                        String sb = """
+                                <b>🔐 Admin Panel</b>
+                                
+                                Quyidagi bo‘limlardan birini tanlang:
+                                
+                                1️⃣ <b>👤 Foydalanuvchilar</b> — foydalanuvchilar ro‘yxati va ma’lumotlari
+                                2️⃣ <b>🚗 Avtomobillar</b> — avtomobil qo‘shish, tahrirlash, o‘chirish
+                                3️⃣ <b>📦 Buyurtmalar</b> — buyurtmalarni ko‘rish va boshqarish
+                                4️⃣ <b>⚠ Jarimalar</b> — jarimalar ro‘yxati va tahlil
+                                5️⃣ <b>📢 E’lonlar</b> — foydalanuvchilarga xabar yuborish
+                                """;
+
+                        TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
+
+                        user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                        userRepository.save(user);
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(sb)
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                                .build();
+
+                    } else {
+
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text("⛔ <b>Sizda bu bo‘limga kirish huquqi yo‘q!</b>")
+                                .parseMode(ParseMode.HTML)
+                                .build();
+
+                    }
+                }
+                case "/user" -> {
 
                     TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
 
-                    user.setStep(StepEnum.SELECT_MENU_ADMIN);
+                    user.setStep(StepEnum.SELECT_MENU);
 
                     userRepository.save(user);
 
                     return SendMessage.builder()
                             .chatId(chatId)
-                            .text(sb)
-                            .parseMode(ParseMode.HTML)
-                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                            .text("User MENU")
+                            .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.USER))
                             .build();
-
-                } else {
-
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text("⛔ <b>Sizda bu bo‘limga kirish huquqi yo‘q!</b>")
-                            .parseMode(ParseMode.HTML)
-                            .build();
-
                 }
-
             }
 
         } else {
