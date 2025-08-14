@@ -35,4 +35,6 @@ public interface InlineButtonService {
     InlineKeyboardMarkup buildBookingMenu();
 
     InlineKeyboardMarkup buildPenaltyMenuForAdmin();
+
+    InlineKeyboardMarkup buildNotificationMSG();
 }

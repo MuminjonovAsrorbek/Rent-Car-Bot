@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
@@ -249,6 +250,48 @@ public class AdminCallbackServiceImpl implements AdminCallbackService {
                     return SendMessage.builder()
                             .chatId(chatId)
                             .text(senMessage)
+                            .replyMarkup(replyButtonService.buildCancelButton())
+                            .build();
+
+                }
+
+            } else if (data.startsWith("ANNOUNCE")) {
+
+                if (data.equals("ANNOUNCE_ALL")) {
+
+                    user.setStep(StepEnum.SEND_MSG_ALL);
+
+                    telegramUserRepository.save(user);
+
+                    DeleteMessage deleteMessage = DeleteMessage.builder()
+                            .chatId(chatId)
+                            .messageId(messageId)
+                            .build();
+
+                    myTelegramBot.deleteMessage(deleteMessage);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Habaringizni yuboring")
+                            .replyMarkup(replyButtonService.buildCancelButton())
+                            .build();
+
+                } else {
+
+                    user.setStep(StepEnum.SEND_MSG_ONE);
+
+                    telegramUserRepository.save(user);
+
+                    DeleteMessage deleteMessage = DeleteMessage.builder()
+                            .chatId(chatId)
+                            .messageId(messageId)
+                            .build();
+
+                    myTelegramBot.deleteMessage(deleteMessage);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos user chatId kiriting")
                             .replyMarkup(replyButtonService.buildCancelButton())
                             .build();
 

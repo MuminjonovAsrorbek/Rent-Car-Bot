@@ -1,8 +1,10 @@
 package uz.dev.rentcarbot.service;
 
 import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.ForwardMessage;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -11,6 +13,7 @@ import uz.dev.rentcarbot.client.BookingClient;
 import uz.dev.rentcarbot.client.PaymentClient;
 import uz.dev.rentcarbot.client.PenaltyClient;
 import uz.dev.rentcarbot.client.StatisticsClient;
+import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
@@ -24,6 +27,7 @@ import uz.dev.rentcarbot.service.template.InlineButtonService;
 import uz.dev.rentcarbot.service.template.ReplyButtonService;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -42,8 +46,9 @@ public class AdminTextServiceImpl implements AdminTextService {
     private final ReplyButtonService replyButtonService;
     private final PaymentClient paymentClient;
     private final PenaltyClient penaltyClient;
+    private final MyTelegramBot myTelegramBot;
 
-    public AdminTextServiceImpl(TelegramUserRepository userRepository, StatisticsClient statisticsClient, InlineButtonService inlineButtonService, BookingClient bookingClient, ReplyButtonService replyButtonService, PaymentClient paymentClient, PenaltyClient penaltyClient) {
+    public AdminTextServiceImpl(TelegramUserRepository userRepository, StatisticsClient statisticsClient, InlineButtonService inlineButtonService, BookingClient bookingClient, ReplyButtonService replyButtonService, PaymentClient paymentClient, PenaltyClient penaltyClient, @Lazy MyTelegramBot myTelegramBot) {
         this.userRepository = userRepository;
         this.statisticsClient = statisticsClient;
         this.inlineButtonService = inlineButtonService;
@@ -51,6 +56,7 @@ public class AdminTextServiceImpl implements AdminTextService {
         this.replyButtonService = replyButtonService;
         this.paymentClient = paymentClient;
         this.penaltyClient = penaltyClient;
+        this.myTelegramBot = myTelegramBot;
     }
 
     @Override
@@ -62,6 +68,8 @@ public class AdminTextServiceImpl implements AdminTextService {
         Long chatId = message.getChatId();
 
         TelegramUser user = userRepository.findByChatIdOrThrowException(chatId);
+
+        Integer messageId = message.getMessageId();
 
         if (user.getStep().equals(StepEnum.SELECT_MENU_ADMIN)) {
 
@@ -125,6 +133,24 @@ public class AdminTextServiceImpl implements AdminTextService {
                             .parseMode(ParseMode.HTML)
                             .replyMarkup(inlineKeyboardMarkup)
                             .build();
+                }
+                case "\uD83D\uDCE2 E’lonlar" -> {
+
+                    String sedMessage = """
+                            <b>📢 E'lonlar bo'limi</b>
+                            
+                            Bu yerda siz <b>hammaga</b> yoki <b>bitta foydalanuvchiga</b> e'lon yuborishingiz mumkin.
+                            
+                            <i>Tanlang:</i>
+                            """;
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text(sedMessage)
+                            .parseMode(ParseMode.HTML)
+                            .replyMarkup(inlineButtonService.buildNotificationMSG())
+                            .build();
+
                 }
             }
 
@@ -298,6 +324,13 @@ public class AdminTextServiceImpl implements AdminTextService {
                                 .build();
 
                     }
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
                 }
 
             } else {
@@ -349,9 +382,131 @@ public class AdminTextServiceImpl implements AdminTextService {
 
                     }
 
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
                 }
 
             }
+
+        } else if (user.getStep().toString().startsWith("SEND_MSG")) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            if (user.getStep().equals(StepEnum.SEND_MSG_ALL)) {
+
+                List<TelegramUser> users = userRepository.findAll();
+
+                for (TelegramUser telegramUser : users) {
+
+                    if (telegramUser.getChatId() != null) {
+
+                        ForwardMessage forwardMessage = ForwardMessage.builder()
+                                .chatId(telegramUser.getChatId())
+                                .fromChatId(chatId)
+                                .messageId(messageId)
+                                .build();
+
+                        myTelegramBot.forwardMessage(forwardMessage);
+
+                    }
+
+                }
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("Habaringiz yuborildi")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            } else {
+
+                Pattern pattern = Pattern.compile("^\\d+$");
+
+                if (pattern.matcher(text).matches()) {
+
+                    long userId = Long.parseLong(text);
+
+                    myTelegramBot.getUserChatIds().put(chatId, userId);
+
+                    user.setStep(StepEnum.ENTER_TEXT);
+
+                    userRepository.save(user);
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Habaringizni yuboring")
+                            .replyMarkup(replyButtonService.buildCancelButton())
+                            .build();
+
+                } else {
+
+                    return SendMessage.builder()
+                            .chatId(chatId)
+                            .text("Iltimos faqat raqam kiriting !")
+                            .build();
+
+                }
+
+            }
+
+        } else if (user.getStep().equals(StepEnum.ENTER_TEXT)) {
+
+            if (text.equals("Orqaga")) {
+
+                user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+                userRepository.save(user);
+
+                myTelegramBot.getUserChatIds().remove(chatId);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text("MENU")
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                        .build();
+
+            }
+
+            ForwardMessage forwardMessage = ForwardMessage.builder()
+                    .chatId(myTelegramBot.getUserChatIds().get(chatId))
+                    .fromChatId(chatId)
+                    .messageId(messageId)
+                    .build();
+
+            myTelegramBot.forwardMessage(forwardMessage);
+
+            myTelegramBot.getUserChatIds().remove(chatId);
+
+            user.setStep(StepEnum.SELECT_MENU_ADMIN);
+
+            userRepository.save(user);
+
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("Habaringiz yuborildi")
+                    .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.ADMIN))
+                    .build();
 
         }
 

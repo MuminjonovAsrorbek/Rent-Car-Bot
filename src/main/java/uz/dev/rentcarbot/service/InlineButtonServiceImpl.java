@@ -471,4 +471,28 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         return inlineKeyboardMarkup;
     }
 
+    @Override
+    public InlineKeyboardMarkup buildNotificationMSG() {
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        InlineKeyboardButton sendAllBtn = new InlineKeyboardButton();
+        sendAllBtn.setText("📢 Hammaga yuborish");
+        sendAllBtn.setCallbackData("ANNOUNCE_ALL");
+
+
+        InlineKeyboardButton sendOneBtn = new InlineKeyboardButton();
+        sendOneBtn.setText("👤 Bitta foydalanuvchiga");
+        sendOneBtn.setCallbackData("ANNOUNCE_ONE");
+
+        rows.add(List.of(sendAllBtn));
+        rows.add(List.of(sendOneBtn));
+
+        markup.setKeyboard(rows);
+
+        return markup;
+    }
+
 }
