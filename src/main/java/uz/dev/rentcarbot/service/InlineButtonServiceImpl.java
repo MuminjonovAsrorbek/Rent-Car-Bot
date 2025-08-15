@@ -161,7 +161,7 @@ public class InlineButtonServiceImpl implements InlineButtonService {
 
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
-        if (bookingDTOS.get(0).getStatus().equals(BookingStatusEnum.COMPLETED)) { // tekshiruv kerak
+        if (bookingDTOS.get(0).getStatus().equals(BookingStatusEnum.COMPLETED)) {
 
             InlineKeyboardButton btn = new InlineKeyboardButton();
 
