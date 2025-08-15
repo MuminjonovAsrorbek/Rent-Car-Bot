@@ -4,12 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import uz.dev.rentcarbot.enums.BookingStatusEnum;
 import uz.dev.rentcarbot.enums.PageEnum;
 import uz.dev.rentcarbot.enums.PaymetMethodEnum;
-import uz.dev.rentcarbot.payload.CarDTO;
-import uz.dev.rentcarbot.payload.FavoriteDTO;
-import uz.dev.rentcarbot.payload.OfficeDTO;
-import uz.dev.rentcarbot.payload.PageableDTO;
+import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.service.template.InlineButtonService;
 
 import java.util.ArrayList;
@@ -145,6 +143,36 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
 
         List<InlineKeyboardButton> row = getNextAndPrevBtns(id, pageableDTO, pageEnum);
+
+        keyboard.add(row);
+
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+
+        return inlineKeyboardMarkup;
+
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildPagesForMyBookings(PageableDTO pageableDTO, PageEnum pageEnum) {
+
+        List<BookingDTO> bookingDTOS = pageableDTO.getObjects();
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        if (bookingDTOS.get(0).getStatus().equals(BookingStatusEnum.COMPLETED)) { // tekshiruv kerak
+
+            InlineKeyboardButton btn = new InlineKeyboardButton();
+
+            btn.setText("⭐ Reyting berish");
+            btn.setCallbackData("review:" + bookingDTOS.get(0).getCarId());
+
+            keyboard.add(List.of(btn));
+
+        }
+
+        List<InlineKeyboardButton> row = getNextAndPrevBtns(0L, pageableDTO, pageEnum);
 
         keyboard.add(row);
 
@@ -493,6 +521,54 @@ public class InlineButtonServiceImpl implements InlineButtonService {
         markup.setKeyboard(rows);
 
         return markup;
+    }
+
+    @Override
+    public InlineKeyboardMarkup buildRating(Long carId) {
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        InlineKeyboardButton firstBtn = new InlineKeyboardButton();
+
+        firstBtn.setText("⭐️");
+        firstBtn.setCallbackData("rating:1:" + carId);
+
+        rows.add(List.of(firstBtn));
+
+        InlineKeyboardButton secondBtn = new InlineKeyboardButton();
+
+        secondBtn.setText("⭐️ ⭐️");
+        secondBtn.setCallbackData("rating:2:" + carId);
+
+        rows.add(List.of(secondBtn));
+
+        InlineKeyboardButton thirdBtn = new InlineKeyboardButton();
+
+        thirdBtn.setText("⭐️ ⭐️ ⭐️️️");
+        thirdBtn.setCallbackData("rating:3:" + carId);
+
+        rows.add(List.of(thirdBtn));
+
+        InlineKeyboardButton fourthBtn = new InlineKeyboardButton();
+
+        fourthBtn.setText("⭐️ ⭐️ ⭐️ ⭐️️️");
+        fourthBtn.setCallbackData("rating:4:" + carId);
+
+        rows.add(List.of(fourthBtn));
+
+        InlineKeyboardButton fiveBtn = new InlineKeyboardButton();
+
+        fiveBtn.setText("⭐️ ⭐️ ⭐️ ⭐️ ⭐️️️");
+        fiveBtn.setCallbackData("rating:5:" + carId);
+
+        rows.add(List.of(fiveBtn));
+
+        markup.setKeyboard(rows);
+
+        return markup;
+
     }
 
 }

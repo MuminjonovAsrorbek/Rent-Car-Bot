@@ -13,6 +13,7 @@ import uz.dev.rentcarbot.client.*;
 import uz.dev.rentcarbot.config.MyTelegramBot;
 import uz.dev.rentcarbot.entity.TelegramUser;
 import uz.dev.rentcarbot.enums.PageEnum;
+import uz.dev.rentcarbot.enums.RoleEnum;
 import uz.dev.rentcarbot.enums.StepEnum;
 import uz.dev.rentcarbot.payload.*;
 import uz.dev.rentcarbot.repository.TelegramUserRepository;
@@ -24,6 +25,7 @@ import uz.dev.rentcarbot.utils.DateTimeValidator;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -40,8 +42,9 @@ public class UserTextServiceImpl implements UserTextService {
     private final BookingClient bookingClient;
     private final NotificationClient notificationClient;
     private final FavoriteClient favoriteClient;
+    private final ReviewClient reviewClient;
 
-    public UserTextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient, BookingClient bookingClient, NotificationClient notificationClient, FavoriteClient favoriteClient) {
+    public UserTextServiceImpl(TelegramUserRepository userRepository, ReplyButtonService replyButtonService, InlineButtonService inlineButtonService, @Lazy MyTelegramBot telegramBot, OfficeClient officeClient, CarClient carClient, PromoCodeClient promoCodeClient, BookingClient bookingClient, NotificationClient notificationClient, FavoriteClient favoriteClient, ReviewClient reviewClient) {
         this.userRepository = userRepository;
         this.replyButtonService = replyButtonService;
         this.inlineButtonService = inlineButtonService;
@@ -52,6 +55,7 @@ public class UserTextServiceImpl implements UserTextService {
         this.bookingClient = bookingClient;
         this.notificationClient = notificationClient;
         this.favoriteClient = favoriteClient;
+        this.reviewClient = reviewClient;
     }
 
 
@@ -117,7 +121,7 @@ public class UserTextServiceImpl implements UserTextService {
                             .chatId(chatId)
                             .text(sendMessage.toString())
                             .parseMode(ParseMode.HTML)
-                            .replyMarkup(inlineButtonService.buildPages(0L, myBookings, PageEnum.BOOKING))
+                            .replyMarkup(inlineButtonService.buildPagesForMyBookings(myBookings, PageEnum.BOOKING))
                             .build();
                 }
                 case "\uD83D\uDD14 Xabarnomalar" -> {
@@ -250,6 +254,35 @@ public class UserTextServiceImpl implements UserTextService {
                 return SendMessage.builder()
                         .chatId(chatId)
                         .text("Telefon raqami formati notog'ri . Misol : +998912345678")
+                        .build();
+
+            }
+
+        } else if (user.getStep().equals(StepEnum.REVIEW_TEXT)) {
+
+            ReviewDTO reviewDTO = telegramBot.getUserReviews().get(chatId);
+
+            reviewDTO.setComment(text);
+            reviewDTO.setUserId(user.getUserId());
+
+            ReviewDTO review = reviewClient.createReview(reviewDTO);
+
+            if (Objects.nonNull(review)) {
+
+                user.setStep(StepEnum.SELECT_MENU);
+
+                userRepository.save(user);
+
+                String sendMessage = """
+                        ✅ <b>Rahmat!</b> \s
+                        Sizning bahoyingiz va izohingiz qabul qilindi. \s
+                        Sizning fikringiz kelajakda xizmatimizni yanada yaxshilashga yordam beradi! \uD83D\uDE4F""";
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text(sendMessage)
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(replyButtonService.buildMenuButtons(RoleEnum.USER))
                         .build();
 
             }
