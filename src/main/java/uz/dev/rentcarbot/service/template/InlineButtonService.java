@@ -18,6 +18,8 @@ public interface InlineButtonService {
 
     InlineKeyboardMarkup buildPages(Long Id, PageableDTO pageableDTO, PageEnum pageEnum);
 
+    InlineKeyboardMarkup buildPagesForMyBookings(PageableDTO pageableDTO, PageEnum pageEnum);
+
     InlineKeyboardMarkup buildIsForSelfOr();
 
     InlineKeyboardMarkup buildPaymentMethod();
@@ -37,4 +39,6 @@ public interface InlineButtonService {
     InlineKeyboardMarkup buildPenaltyMenuForAdmin();
 
     InlineKeyboardMarkup buildNotificationMSG();
+
+    InlineKeyboardMarkup buildRating(Long carId);
 }

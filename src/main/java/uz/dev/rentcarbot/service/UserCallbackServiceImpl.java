@@ -481,6 +481,66 @@ public class UserCallbackServiceImpl implements UserCallbackService {
 
                 return getCarInfo(messageId, chatId, data);
 
+            } else if (data.startsWith("review:")) {
+
+                long carId = Long.parseLong(data.split(":")[1]);
+
+                InlineKeyboardMarkup inlineKeyboardMarkup = inlineButtonService.buildRating(carId);
+
+                String sendMessage = """
+                        <b>\uD83D\uDE97 Sizning tajribangiz biz uchun muhim!</b>
+                        
+                        Iltimos, ushbu car uchun <b>1 dan 5 gacha</b> baho kiriting: \s
+                        <pre>1️⃣ Juda yomon \s
+                        2️⃣ Yaxshi emas \s
+                        3️⃣ O'rtacha \s
+                        4️⃣ Yaxshi \s
+                        5️⃣ Zo'r!</pre>""";
+
+                return EditMessageText.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .text(sendMessage)
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(inlineKeyboardMarkup)
+                        .build();
+
+            } else if (data.startsWith("rating:")) {
+
+                int rating = Integer.parseInt(data.split(":")[1]);
+
+                long carId = Long.parseLong(data.split(":")[2]);
+
+                ReviewDTO reviewDTO = new ReviewDTO();
+
+                reviewDTO.setRating(rating);
+                reviewDTO.setCarId(carId);
+
+                telegramBot.getUserReviews().put(chatId, reviewDTO);
+
+                String sendMessage = """
+                        <b>✍️ Izoh qoldiring:</b> \s
+                        Tajribangiz haqida qisqacha yozing. \s
+                        Masalan: <i>"Mashina juda toza edi, vaqtida yetkazildi"</i>""";
+
+                DeleteMessage deleteMessage = DeleteMessage.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .build();
+
+                telegramBot.deleteMessage(deleteMessage);
+
+                user.setStep(StepEnum.REVIEW_TEXT);
+
+                telegramUserRepository.save(user);
+
+                return SendMessage.builder()
+                        .chatId(chatId)
+                        .text(sendMessage)
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(replyButtonService.buildCancelButton())
+                        .build();
+
             }
 
         }
@@ -627,7 +687,7 @@ public class UserCallbackServiceImpl implements UserCallbackService {
                 .text(message.toString())
                 .messageId(messageId)
                 .parseMode(ParseMode.HTML)
-                .replyMarkup(inlineButtonService.buildPages(0L, myBookings, PageEnum.BOOKING))
+                .replyMarkup(inlineButtonService.buildPagesForMyBookings(myBookings, PageEnum.BOOKING))
                 .build();
     }
 

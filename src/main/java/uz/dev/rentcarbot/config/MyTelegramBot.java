@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import uz.dev.rentcarbot.payload.BookingCreateDTO;
+import uz.dev.rentcarbot.payload.ReviewDTO;
 import uz.dev.rentcarbot.service.template.UpdateDispatcherService;
 
 import java.util.HashMap;
@@ -45,6 +46,9 @@ public class MyTelegramBot extends TelegramWebhookBot {
 
     @Getter
     private final Map<Long, Long> userChatIds = new HashMap<>();
+
+    @Getter
+    private final Map<Long, ReviewDTO> userReviews = new HashMap<>();
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {

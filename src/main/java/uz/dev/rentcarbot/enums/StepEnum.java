@@ -35,6 +35,7 @@ public enum StepEnum {
     PENALTY_CANCEL,
     SEND_MSG_ALL,
     SEND_MSG_ONE,
-    ENTER_TEXT
+    ENTER_TEXT,
+    REVIEW_TEXT
 
 }
